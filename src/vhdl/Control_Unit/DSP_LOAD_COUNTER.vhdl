@@ -21,8 +21,9 @@
 
 --! @file DSP_LOAD_COUNTER.vhdl
 --! @author Jonas Fuhrmann
---! @brief This component is a counter, which uses a DSP block for fast, big adders.
---! @details The counter can be loaded with any given value and adds the start value every clock cycle.
+
+--! Este componente é um contador, que faz uso de um Bloco DSP (Digital Signal Processing) para rapidas e maiores somas.
+--! O Contador pode ser carregado com qualquer valor dado e soma o valor inicial a cada Ciclo de clock. 
 
 use WORK.TPU_pack.all;
 library IEEE;
@@ -38,16 +39,16 @@ entity DSP_LOAD_COUNTER is
         CLK, RESET  : in  std_logic;
         ENABLE      : in  std_logic;
         
-        START_VAL   : in  std_logic_vector(COUNTER_WIDTH-1 downto 0); --!< The given start value of the counter.
-        LOAD        : in  std_logic; --!< Load flag for the start value.
+        START_VAL   : in  std_logic_vector(COUNTER_WIDTH-1 downto 0); --!< O valor inicial do contador.
+        LOAD        : in  std_logic; --!< Flag de carregamento para o valor inicial.
         
-        COUNT_VAL   : out std_logic_vector(COUNTER_WIDTH-1 downto 0) --!< The current value of the counter.
+        COUNT_VAL   : out std_logic_vector(COUNTER_WIDTH-1 downto 0) --!< O valor atual do contador.
     );
 end entity DSP_LOAD_COUNTER;
 
 --! @brief The architecture of the DSP load counter component.
 architecture BEH of DSP_LOAD_COUNTER is
-    signal COUNTER_INPUT_cs : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (others => '0');
+    signal COUNTER_INPUT_cs : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (others => '0'); -- Sinais de passagem do Input do contador
     signal COUNTER_INPUT_ns : std_logic_vector(COUNTER_WIDTH-1 downto 0);
     
     signal INPUT_PIPE_cs : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (others => '0');
@@ -62,13 +63,16 @@ architecture BEH of DSP_LOAD_COUNTER is
     attribute use_dsp : string;
     attribute use_dsp of COUNTER_ns : signal is "yes";
 begin
-    LOAD_ns <= LOAD;
+    -- O mesmo contador de ACC_LOAD_COUNTER porem este so pode ser resetado atraves do LOAD.
+    -- NAO GERA UM SINAL DE EVENTO
 
-    INPUT_PIPE_ns <= START_VAL when LOAD = '1' else (0 => '1', others => '0');
-    COUNTER_INPUT_ns <= INPUT_PIPE_cs;
+    LOAD_ns <= LOAD; 
+
+    INPUT_PIPE_ns <= START_VAL when LOAD = '1' else ((COUNTER_WIDTH-1 downto 1 => '0')&'1'); -- Inserção do valor inicial ou do valor 1 em binario
+    COUNTER_INPUT_ns <= INPUT_PIPE_cs; -- COUNTER_INPUT_ns <- INPUT_PIPE_cs <- INPUT_PIPE_ns;
     
-    COUNTER_ns <= std_logic_vector(unsigned(COUNTER_cs) + unsigned(COUNTER_INPUT_cs));
-    COUNT_VAL <= COUNTER_cs;
+    COUNTER_ns <= std_logic_vector(unsigned(COUNTER_cs) + unsigned(COUNTER_INPUT_cs)); -- Contador somando de "um em um"
+    COUNT_VAL <= COUNTER_cs; -- Atualiza o valor do contador atual
     
     SEQ_LOG:
     process(CLK) is

@@ -21,9 +21,10 @@
 
 --! @file LOOK_AHEAD_BUFFER.vhdl
 --! @author Jonas Fuhrmann
---! @brief This component includes a small look ahead buffer for instructions. 
---! @details Weight instructions should be executed with matrix multiply instructions in parallel.
---! The look ahead buffer waits for a matrix multiply instruction, when a weight instruction was feeded.
+--! Este componente inclui um pequeno look ahead buffer para as instruções.
+--! As instruções de peso devem ser executadas com a MMU em paralelo.
+--! O LAB espera por uma instrução de Matrix Multiply, quando uma instrução de peso é enviada.
+
 
 use WORK.TPU_pack.all;
 library IEEE;
@@ -35,65 +36,78 @@ entity LOOK_AHEAD_BUFFER is
         CLK, RESET          :  in std_logic;
         ENABLE              :  in std_logic;
         
-        INSTRUCTION_BUSY    :  in std_logic; --!< Busy feedback from control coordinator to stop pipelining.
+        INSTRUCTION_BUSY    :  in std_logic; --!< Busy feedback do control coordinator para parar o pipeline.
         
-        INSTRUCTION_INPUT   :  in INSTRUCTION_TYPE; --!< The input for instructions.
-        INSTRUCTION_WRITE   :  in std_logic; --!< Write flag for instructions.
+        INSTRUCTION_INPUT   :  in INSTRUCTION_TYPE; --!< O input para as instruções.
+        INSTRUCTION_WRITE   :  in std_logic; --!< Flag de escrita para as instruções.
         
-        INSTRUCTION_OUTPUT  : out INSTRUCTION_TYPE; --!< The output for pipelined instructions.
-        INSTRUCTION_READ    : out std_logic --!< Read flag for instructions.
+        INSTRUCTION_OUTPUT  : out INSTRUCTION_TYPE; --!< O output para as instruções em pipeline.
+        INSTRUCTION_READ    : out std_logic --!< Flag de leitura para as instruções.
     );
 end entity LOOK_AHEAD_BUFFER;
 
 --! @brief The architecture of the look ahead buffer.
 architecture BEH of LOOK_AHEAD_BUFFER is
+    -- Registradores para o Input da instruçao
     signal INPUT_REG_cs     : INSTRUCTION_TYPE := INIT_INSTRUCTION;
     signal INPUT_REG_ns     : INSTRUCTION_TYPE;
     
+    -- Registradores para a Flag de escrita
     signal INPUT_WRITE_cs   : std_logic := '0';
     signal INPUT_WRITE_ns   : std_logic;
     
+    -- Pipeline para as instruções
     signal PIPE_REG_cs      : INSTRUCTION_TYPE := INIT_INSTRUCTION;
     signal PIPE_REG_ns      : INSTRUCTION_TYPE;
     
+    -- Pipeline para as flags de escrita
     signal PIPE_WRITE_cs    : std_logic := '0';
     signal PIPE_WRITE_ns    : std_logic;
     
+    -- Registradores para o Output das instruções
     signal OUTPUT_REG_cs    : INSTRUCTION_TYPE := INIT_INSTRUCTION;
     signal OUTPUT_REG_ns    : INSTRUCTION_TYPE;
     
+    -- Registradores para as instruções em pipeline
     signal OUTPUT_WRITE_cs  : std_logic := '0';
     signal OUTPUT_WRITE_ns  : std_logic;
 begin
-    INPUT_REG_ns    <= INSTRUCTION_INPUT;    
+    -- Inserção de uma nova instrução
+    INPUT_REG_ns    <= INSTRUCTION_INPUT;
+    
+    -- A instrução de saida para o pipeline recebera uma nova instrução se o Controlador nao estiver "BUSY", caso contrario recebe o valor default
     INSTRUCTION_OUTPUT  <= OUTPUT_REG_cs when INSTRUCTION_BUSY = '0' else INIT_INSTRUCTION;
     
+    -- Inserção de uma nova flag para escrita
     INPUT_WRITE_ns  <= INSTRUCTION_WRITE;
+
+    -- A instrução de saida para o pipeline ler uma nova instrução se o Controlador nao estiver "BUSY", caso contrario recebe o valor default
     INSTRUCTION_READ    <= OUTPUT_WRITE_cs when INSTRUCTION_BUSY = '0' else '0';
 
+    -- ??????????????????????????????????
     LOOK_AHEAD:
     process(INPUT_REG_cs, PIPE_REG_cs, INPUT_WRITE_cs, PIPE_WRITE_cs) is
     begin 
-        if PIPE_WRITE_cs = '1' then
-            if PIPE_REG_cs.OP_CODE(OP_CODE_WIDTH-1 downto 3) = "00001" then -- weight in pipe
-                if INPUT_WRITE_cs = '1' then
+        if PIPE_WRITE_cs = '1' then -- Verifica se existe uma instrução a ser inserida
+            if PIPE_REG_cs.OP_CODE(OP_CODE_WIDTH-1 downto 3) = "00001" then -- Verifica se há um peso no Pipeline
+                if INPUT_WRITE_cs = '1' then -- E se o sinal de escrita estiver ativado, então novos dados são alimentados para o output e inseridos no pipeline
                     PIPE_REG_ns     <= INPUT_REG_cs;
                     OUTPUT_REG_ns   <= PIPE_REG_cs;
                     PIPE_WRITE_ns   <= INPUT_WRITE_cs;
                     OUTPUT_WRITE_ns <= PIPE_WRITE_cs;
-                else -- wait until next instruction is feeded
-                    PIPE_REG_ns     <= PIPE_REG_cs;
-                    OUTPUT_REG_ns   <= INIT_INSTRUCTION;
-                    PIPE_WRITE_ns   <= PIPE_WRITE_cs;
-                    OUTPUT_WRITE_ns <= '0';
+                else -- Espera por uma nova instrução a ser inserida
+                    PIPE_REG_ns     <= PIPE_REG_cs; -- O pipe atual retorna um estado
+                    OUTPUT_REG_ns   <= INIT_INSTRUCTION; -- O output de instrução é default
+                    PIPE_WRITE_ns   <= PIPE_WRITE_cs;-- O pipe atual retorna um estado
+                    OUTPUT_WRITE_ns <= '0'; -- Output de escrita é default
                 end if;
-            else
+            else 
                 PIPE_REG_ns     <= INPUT_REG_cs;
                 OUTPUT_REG_ns   <= PIPE_REG_cs;
                 PIPE_WRITE_ns   <= INPUT_WRITE_cs;
                 OUTPUT_WRITE_ns <= PIPE_WRITE_cs;
             end if;
-        else
+        else -- Se não tiver ele insere mesmo assim. QUE???????????????????????????????
             PIPE_REG_ns     <= INPUT_REG_cs;
             OUTPUT_REG_ns   <= PIPE_REG_cs;
             PIPE_WRITE_ns   <= INPUT_WRITE_cs;

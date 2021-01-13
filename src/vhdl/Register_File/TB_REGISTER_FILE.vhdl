@@ -49,7 +49,7 @@ architecture BEH of TB_REGISTER_FILE is
     end component DUT;
     for all : DUT use entity WORK.REGISTER_FILE(BEH);
     
-    constant MATRIX_WIDTH   : natural := 4;
+    constant MATRIX_WIDTH   : natural := 8;
     signal CLK, RESET       : std_logic;
     signal ENABLE           : std_logic;
     signal WRITE_ADDRESS    : HALFWORD_TYPE;
@@ -60,8 +60,8 @@ architecture BEH of TB_REGISTER_FILE is
     signal READ_PORT        : WORD_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
     
     -- for clock gen
-    constant clock_period   : time := 10 ns;
-    signal stop_the_clock   : boolean;
+    constant clock_period   : time := 10 ns; -- O chaveamento do clock ocorre a cada 10ns
+    signal stop_the_clock   : boolean; 
 begin
     DUT_i : DUT
     generic map(
@@ -80,37 +80,59 @@ begin
         READ_PORT       => READ_PORT
     );
     
+    -- Processo de ativação do clock, ele fica 5ns ativado e 5ns desativado
+    CLOCK_GEN: 
+    process
+    begin
+        while not stop_the_clock loop
+          CLK <= '0', '1' after clock_period / 2; -- Clock iniciado com 0, muda para 1 apos 5ns
+          wait for clock_period; -- Esoera por 10ns
+        end loop;
+        CLK <= '0';
+        wait; 
+    end process CLOCK_GEN;
+
     STIMULUS:
     process is
     begin
+        -- Inicialização dos registros e sinais 
+        -- Espera ate que ocorra um evento de clock e o sinal do clock seja 1
         stop_the_clock <= false;
         RESET <= '0';
-        ENABLE <= '0';
+        ENABLE <= '0'; -- Impede que os acumuladores ativem
         WRITE_ADDRESS <= (others => '0');
         WRITE_PORT <= (others => (others => '0'));
         WRITE_ENABLE <= '1';
         ACCUMULATE <= '0';
         READ_ADDRESS <= (others => '0');
         wait until '1'=CLK and CLK'event;
-        -- RESET
+
+        -- Operação de Reset
+        -- O Teste inicia com RESET ativado, impedindo de ocorrer operações.
         RESET <= '1';
         wait until '1'=CLK and CLK'event;
         RESET <= '0';
         wait until '1'=CLK and CLK'event;
-        ENABLE <= '1';
-        -- TEST - hold values
+        ENABLE <= '1'; -- Permite que os acumuladores recebam informações
+
+        -- Teste de armazenamento de valores
         for i in 0 to MATRIX_WIDTH-1 loop
             for j in 0 to MATRIX_WIDTH-1 loop
+                report "inside";
+                -- WritePort recebe um barramento de valor "i" convertido para unsigned no tamanho 32bits
                 WRITE_PORT(j) <= std_logic_vector(to_unsigned(i, 4*BYTE_WIDTH));
             end loop;
-            WRITE_ADDRESS <= std_logic_vector(to_unsigned(i, 2*BYTE_WIDTH));
-            WRITE_ENABLE <= '1';
+            -- Recebe o endereço onde sera escrito no acumulador, tamanho 16 bits
+            WRITE_ADDRESS <= std_logic_vector(to_unsigned(i, 2*BYTE_WIDTH)); 
+            WRITE_ENABLE <= '1'; -- Ativa a permissao de escrita
             wait until '1'=CLK and CLK'event;
         end loop;
         
-        WRITE_ENABLE <= '0';
+        WRITE_ENABLE <= '0'; -- Desativa a permissao de escrita
         
+        -- Le os dados que acabaram de ser colocados no barramento dos acumuladores
         for i in 0 to MATRIX_WIDTH-1 loop
+            -- Lê o endereço onde sera escrito no acumulador, tamanho 16 bits
             READ_ADDRESS <= std_logic_vector(to_unsigned(i, 2*BYTE_WIDTH));
             for j in 0 to MATRIX_WIDTH-1 loop
                 wait for 1 ns;
@@ -123,12 +145,16 @@ begin
             wait until '1'=CLK and CLK'event;
         end loop;
         
-        -- TEST - accumulate values
-        ACCUMULATE <= '1';
+        -- Teste dos valores acumulados
+        ACCUMULATE <= '1'; -- Permite que os dados das portas sejam acumulados
+
+        -- Inserção dos dados no barramento que serao testados
         for i in 0 to MATRIX_WIDTH-1 loop
             for j in 0 to MATRIX_WIDTH-1 loop
+                -- WritePort recebe um barramento de valor "j" convertido para unsigned no tamanho 32bits
                 WRITE_PORT(j) <= std_logic_vector(to_unsigned(j, 4*BYTE_WIDTH));
             end loop;
+            -- Recebe o endereço onde sera escrito no acumulador, tamanho 16 bits
             WRITE_ADDRESS <= std_logic_vector(to_unsigned(i, 2*BYTE_WIDTH));
             WRITE_ENABLE <= '1';
             wait until '1'=CLK and CLK'event;
@@ -136,6 +162,7 @@ begin
         end loop;
         WRITE_ENABLE <= '0';
         
+        --Verifica se os dados colocados estão corretos
         for i in 0 to MATRIX_WIDTH-1 loop
             READ_ADDRESS <= std_logic_vector(to_unsigned(i, 2*BYTE_WIDTH));
             for j in 0 to MATRIX_WIDTH-1 loop
@@ -151,17 +178,8 @@ begin
                 
         report "Test was successful!" severity NOTE;
         
-        --stop_the_clock <= true;
+        stop_the_clock <= true;
         wait;
     end process STIMULUS;
     
-    CLOCK_GEN: 
-    process
-    begin
-        while not stop_the_clock loop
-          CLK <= '0', '1' after clock_period / 2;
-          wait for clock_period;
-        end loop;
-        wait;
-    end process CLOCK_GEN;
 end architecture BEH;

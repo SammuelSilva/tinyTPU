@@ -21,10 +21,10 @@
 
 --! @file RUNTIME_COUNTER.vhdl
 --! @author Jonas Fuhrmann
---! @brief This component includes the counter for runtime measurements.
---! @details The counter starts when a new Instruction is feeded to the TPU.
---! When the TPU signals a synchronization, the counter will stop and hold it's value.
-
+--! Este componente inclui um contador para medição do tempo de execução.
+--! O contador inicia quando uma nova instrução é inserida na TPU.
+--! Quando a TPU sinaliza uma sincronização, o contador ira parar e "segurar" o valor atual.
+--! Verificação do tempo de execução. (VERIFICAR)
 use WORK.TPU_pack.all;
 library IEEE;
     use IEEE.std_logic_1164.all;
@@ -33,15 +33,17 @@ library IEEE;
 entity RUNTIME_COUNTER is
     port(
         CLK, RESET      :  in std_logic;
-        
-        INSTRUCTION_EN  :  in std_logic; --!< Signals that a new Instruction was feeded and starts the counter.
-        SYNCHRONIZE     :  in std_logic; --!< Signals that the calculations are done, stops the counter and holds it's value.
-        COUNTER_VAL     : out WORD_TYPE  --!< The current value of the counter. 
+
+        INSTRUCTION_EN  :  in std_logic; --!< Sinaliza que uma nova instrução foi recebida e inicia o contador
+        SYNCHRONIZE     :  in std_logic; --!< Sinaliza que os calculos acabaram, para o contador e armazena o valor.
+        COUNTER_VAL     : out WORD_TYPE  --!< O valor atual do contador. 
     );
 end entity RUNTIME_COUNTER;
 
 --! @brief The architecture of the runtime counter.
 architecture BEH of RUNTIME_COUNTER is
+    constant ADD_ONE  : std_logic_vector(1 downto 0) := (1 => '0', 0 => '1');
+
     signal COUNTER_cs : WORD_TYPE := (others => '0');
     signal COUNTER_ns : WORD_TYPE;
     
@@ -56,45 +58,53 @@ architecture BEH of RUNTIME_COUNTER is
     attribute use_dsp : string;
     attribute use_dsp of COUNTER_ns : signal is "yes";
 begin
-    -- Actual adder
-    COUNTER_ns  <= std_logic_vector(unsigned(COUNTER_cs) + '1');
-    -- Pipeline for DSP performance
+    -- Somador
+    COUNTER_ns  <= std_logic_vector(unsigned(COUNTER_cs) + unsigned(ADD_ONE));
+
+    -- Pipeline para o DSP 
     PIPELINE_ns <= COUNTER_cs;
     COUNTER_VAL <= PIPELINE_cs;
 
+    -- Maquina de Estados finita
+    -- State_cs = 0 :: Valor de saida do contador é mantido
+    -- State_cs = 1 :: Valor de saida do contador é atualizado
+    -- Quando ocorre a sincronia (SYNCHRONIZE = 1), o STATE_ns recebe 0 e não ocorre um reset do valor
+        -- Independente se há ou não uma instrução nova
+    -- State_cs = 0 => State_cs = 1 :: INSTRUCTION_EN & SYNCHRONIZE = '10'
+    -- State_cs = 1 => State_cs = 0 :: INSTRUCTION_EN & SYNCHRONIZE = '01','11'
     FSM:
     process(INSTRUCTION_EN, SYNCHRONIZE, STATE_cs) is
         variable INST_EN_SYNCH : std_logic_vector(0 to 1);
     begin
-        INST_EN_SYNCH := INSTRUCTION_EN & SYNCHRONIZE;
-        case STATE_cs is
+        INST_EN_SYNCH := INSTRUCTION_EN & SYNCHRONIZE; -- Concatena uma instrução nova e se os calculos da ultima intrução terminaram
+        case STATE_cs is -- Quando o estado for '0'
             when '0' =>
                 case INST_EN_SYNCH is
-                    when "00" =>
+                    when "00" => -- Nao recebeu nova instrução e há calculos sendo realizados
                         STATE_ns <= '0';
                         RESET_COUNTER <= '0';
-                    when "01" =>
+                    when "01" => -- Não recebeu nova instrução, os calculos terminaram, armazena o valor atual do contador
                         STATE_ns <= '0';
                         RESET_COUNTER <= '0';
-                    when "10" =>
+                    when "10" => -- recebeu uma nova instrução.
                         STATE_ns <= '1';
                         RESET_COUNTER <= '1';
-                    when "11" =>
+                    when "11" => -- Recebeu uma nova instrução e o os calculos terminaram
                         STATE_ns <= '0';
                         RESET_COUNTER <= '0';
                     when others => -- Shouldn't happen
                         STATE_ns <= '0';
                         RESET_COUNTER <= '0';
                 end case;
-            when '1' =>
+            when '1' => -- Recebeu uma nova instrução (state_cs = 1)
                 case INST_EN_SYNCH is
-                    when "00" =>
+                    when "00" =>  -- Nao recebeu uma instrução e há calculos sendo realizados
                         STATE_ns <= '1';
                         RESET_COUNTER <= '0';
-                    when "01" =>
+                    when "01" => -- Não recebeu uma instrução, os calculos terminaram, armazena o valor atual do contador
                         STATE_ns <= '0';
                         RESET_COUNTER <= '0';
-                    when "10" =>
+                    when "10" => -- recebeu uma Instrução e os calculos da atual da atual nao terminou.
                         STATE_ns <= '1';
                         RESET_COUNTER <= '0';
                     when "11" =>
@@ -118,14 +128,14 @@ begin
                 STATE_cs <= '0';
                 PIPELINE_cs <= (others => '0');
             else
-                STATE_cs <= STATE_ns;
-                PIPELINE_cs <= PIPELINE_ns;
+                STATE_cs <= STATE_ns; -- Estado da maquina
+                PIPELINE_cs <= PIPELINE_ns; -- Valor do contador
             end if;
             
             if RESET_COUNTER = '1' then
                 COUNTER_cs <= (others => '0');
             else
-                if STATE_cs = '1' then
+                if STATE_cs = '1' then -- Se o estado da maquina for atualiza o valor do contador
                     COUNTER_cs <= COUNTER_ns;
                 end if;
             end if;

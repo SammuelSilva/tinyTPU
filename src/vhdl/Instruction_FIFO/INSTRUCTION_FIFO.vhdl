@@ -21,8 +21,8 @@
 
 --! @file INSTRUCTION_FIFO.vhdl
 --! @author Jonas Fuhrmann
---! @brief This component includes a simple FIFO for the instruction type.
---! @details Instructions are splitted into 32 Bit words, except for the last word, which is 16 Bit.
+--! Este Componente Incluiu uma Simples FIFO para a Instrução.
+--! Instruções são divididas em palavras de 32 Bit, com excessão da ultima palavra, na qual é de 16 bit
 
 use WORK.TPU_pack.all;
 library IEEE;
@@ -37,16 +37,16 @@ entity INSTRUCTION_FIFO is
     );
     port(
         CLK, RESET  : in  std_logic;
-        LOWER_WORD  : in  WORD_TYPE; --!< The lower word of the instruction.
-        MIDDLE_WORD : in  WORD_TYPE; --!< The middle word of the instruction.
-        UPPER_WORD  : in  HALFWORD_TYPE; --!< The upper halfword (16 Bit) of the instruction.
-        WRITE_EN    : in  std_logic_vector(0 to 2); --!< Write enable flags for each word.
+        LOWER_WORD  : in  WORD_TYPE; --!< A palavra mais baixa da instrução.
+        MIDDLE_WORD : in  WORD_TYPE; --!< A palavra do meio da instrução.
+        UPPER_WORD  : in  HALFWORD_TYPE; --!< A meia-palavra (16 Bit) superior da instrução.
+        WRITE_EN    : in  std_logic_vector(0 to 2); --!< Ativadores de escrita para cada palavra.
         
-        OUTPUT      : out INSTRUCTION_TYPE; --!< Read port of the FIFO.
-        NEXT_EN     : in  std_logic; --!< Read or 'next' enable of the FIFO (clears current value).
+        OUTPUT      : out INSTRUCTION_TYPE; --!< Porta de Leitura da FIFO.
+        NEXT_EN     : in  std_logic; --!< Ativador de Leitura ou "Proximo" da FIFO (Apaga os valores atuais).
         
-        EMPTY       : out std_logic; --!< Determines if the FIFO is empty.
-        FULL        : out std_logic --!< Determines if the FIFO is full.
+        EMPTY       : out std_logic; --!< Determina se a FIFO esta vazia.
+        FULL        : out std_logic --!< Determina se a FIFO esta cheia.
     );
 end entity INSTRUCTION_FIFO;
 
@@ -79,11 +79,14 @@ architecture BEH of INSTRUCTION_FIFO is
     signal UPPER_OUTPUT : HALFWORD_TYPE;
 begin
     
+    -- Verificação se a FIFO esta vazia ou Cheia
     EMPTY   <= EMPTY_VECTOR(0) or EMPTY_VECTOR(1) or EMPTY_VECTOR(2);
     FULL    <= FULL_VECTOR(0)  or FULL_VECTOR(1)  or FULL_VECTOR(2);
     
+    -- Saida passa pelo conversor de BITS -> Instrução com a concatenação de todas as palavras
     OUTPUT  <= BITS_TO_INSTRUCTION(UPPER_OUTPUT & MIDDLE_OUTPUT & LOWER_OUTPUT);
 
+    -- Port Map para a FIFO das 3 partes do conjunto de palavra que será escrito ou lido no DIST_RAM
     FIFO_0 : FIFO
     generic map(
         FIFO_WIDTH  => 4*BYTE_WIDTH,

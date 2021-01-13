@@ -21,7 +21,9 @@
 
 --! @file DSP_COUNTER.vhdl
 --! @author Jonas Fuhrmann
---! @brief This component is a counter, which uses a DSP block for fast, big adders.
+
+--! Este componente é um contador, que faz uso de um Bloco DSP (Digital Signal Processing) para rapidas e maiores somas.
+--! O contador inicia em 0 e pode ser reiniciado. Se o contador atinge um determinado valor, um Sinal de evento é emitido.
 --! @details The counter starts at 0 and can be resetted. If the counter reaches a given end value, an event signal is asserted.
 
 use WORK.TPU_pack.all;
@@ -37,20 +39,23 @@ entity DSP_COUNTER is
         CLK, RESET  : in  std_logic;
         ENABLE      : in  std_logic;
         
-        END_VAL     : in  std_logic_vector(COUNTER_WIDTH-1 downto 0); --!< The end value of he counter, at which this component will produce the event signal.
-        LOAD        : in  std_logic; --!< Load signal for the end value.
+        END_VAL     : in  std_logic_vector(COUNTER_WIDTH-1 downto 0); --!< O Valor final do componente em que sera emitido um Sinal de evento
+        LOAD        : in  std_logic; --!< Sinal para carregar o valor final.
         
-        COUNT_VAL   : out std_logic_vector(COUNTER_WIDTH-1 downto 0); --!< The current value of the counter.
+        COUNT_VAL   : out std_logic_vector(COUNTER_WIDTH-1 downto 0); --!< O valor atual do contador.
         
-        COUNT_EVENT : out std_logic --!< The event, which will be asserted when the end value was reached.
+        COUNT_EVENT : out std_logic --!< O evento, que sera ativado quando o valor final for atingido.
     );
 end entity DSP_COUNTER;
 
 --! @brief The architecture of the DSP counter component.
 architecture BEH of DSP_COUNTER is
-    signal COUNTER : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (others => '0');    
-    signal END_REG : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (others => '0');
+    constant ADD_ONE  : unsigned(COUNTER_WIDTH-1 downto 0) := (COUNTER_WIDTH-1 downto 1 => '0')&'1';
+
+    signal COUNTER : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (others => '0'); -- Contador
+    signal END_REG : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (others => '0'); -- Registro do valor final
     
+    -- Sinais do evento
     signal EVENT_cs : std_logic := '0';
     signal EVENT_ns : std_logic;
     
@@ -60,15 +65,23 @@ architecture BEH of DSP_COUNTER is
     attribute use_dsp : string;
     attribute use_dsp of COUNTER : signal is "yes";
 begin
-    COUNT_VAL <= COUNTER;
-    COUNT_EVENT <= EVENT_PIPE_cs;
-    EVENT_PIPE_ns <= EVENT_cs;
+    -- So é encerrado quando o valor final é atingido. 
+    -- Nada impede que o valor final seja atualizado no decorrer da contagem e caso ocorra a contagem não é parada
+    -- GERA UM SINAL DE EVENTO
 
+    COUNT_VAL <= COUNTER; -- Carrega o valor atual do contador
+
+    -- COUNT_EVENT <- EVENT_PIPE_cs <- EVENT_PIPE_ns <- EVENT_cs <- EVENT_ns | SO ATIVA SE: COUNTER = END_REG  (Contador atinge valor final)
+    EVENT_PIPE_ns <= EVENT_cs;
+    COUNT_EVENT <= EVENT_PIPE_cs; -- Quando o COUNT_EVENT for 1 a contagem acaba 
+
+    
+    -- Processo que verifica se o valor atual do contador é o valor final
     CHECK:
     process(COUNTER, END_REG) is
     begin
-        if COUNTER = END_REG then
-            EVENT_ns <= '1';
+        if COUNTER = END_REG then 
+            EVENT_ns <= '1'; -- Sinal para acabar a contagem
         else
             EVENT_ns <= '0';
         end if;
@@ -84,13 +97,14 @@ begin
                 EVENT_PIPE_cs <= '0';
             else
                 if ENABLE = '1' then
-                    COUNTER <= std_logic_vector(unsigned(COUNTER) + '1');
+                    COUNTER <= std_logic_vector(unsigned(COUNTER) + ADD_ONE); -- Soma de "um em um"
+                    -- Pipe do sinal do Evento, maior parte do tempo é 0
                     EVENT_cs <= EVENT_ns;
                     EVENT_PIPE_cs <= EVENT_PIPE_ns;
                 end if;
             end if;
             
-            if LOAD = '1' then
+            if LOAD = '1' then -- Sinal para carregar o valor final
                 END_REG <= END_VAL;
             end if;
         end if;

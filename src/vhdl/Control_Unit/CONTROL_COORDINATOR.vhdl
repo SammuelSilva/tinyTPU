@@ -21,9 +21,8 @@
 
 --! @file CONTROL_COORDINATOR.vhdl
 --! @author Jonas Fuhrmann
---! @brief This component coordinates all control units.
---! @details The control coordinator dispatches instructions to the appropriate control unit at the right time
---! and waits for each unit to be finished before feeding new instructions.
+--! Este Componente Coordena todas as Control Units.
+--! O Control Coordinator encaminha as intruções para as apropriadas Control Unit no momento certo e espera cada Unidade terminar antes de enviar novas instruções.
 
 use WORK.TPU_pack.all;
 library IEEE;
@@ -35,45 +34,52 @@ entity CONTROL_COORDINATOR is
         CLK, RESET                  :  in std_logic;
         ENABLE                      :  in std_logic;
             
-        INSTRUCTION                 :  in INSTRUCTION_TYPE; --!< The instruction to be dispatched.
-        INSTRUCTION_EN              :  in std_logic; --!< Enable for instruction.
+        INSTRUCTION                 :  in INSTRUCTION_TYPE; --!< Instrução a Ser encaminhada.
+        INSTRUCTION_EN              :  in std_logic; --!< Ativador para a instrução.
         
-        BUSY                        : out std_logic; --!< One unit is still busy while a new instruction was feeded for this exact unit.
+        BUSY                        : out std_logic; --!< Flag que informa se uma Unit esta ocupada enquanto uma nova instrução tenta ser encaminhada.
         
-        WEIGHT_BUSY                 :  in std_logic; --!< Busy input for the weight control unit.
-        WEIGHT_RESOURCE_BUSY        :  in std_logic; --!< Resource busy input for the weight control unit.
-        WEIGHT_INSTRUCTION          : out WEIGHT_INSTRUCTION_TYPE; --!< Instruction output for the weight control unit.
-        WEIGHT_INSTRUCTION_EN       : out std_logic; --!< Instruction enable for the weight control unit.
+        WEIGHT_BUSY                 :  in std_logic; --!< Flag de ocupado para o input da Weight Control Unit.
+        WEIGHT_RESOURCE_BUSY        :  in std_logic; --!< Flag de ocupado para o Resource input da Weight Control Unit.
+        WEIGHT_INSTRUCTION          : out WEIGHT_INSTRUCTION_TYPE; --!< Instrução de Saida para a Weight COntrol Unit.
+        WEIGHT_INSTRUCTION_EN       : out std_logic; --!< Ativador para Instrução para a Weight Control Unit.
         
-        MATRIX_BUSY                 :  in std_logic; --!< Busy input for the matrix multiply control unit.
-        MATRIX_RESOURCE_BUSY        :  in std_logic; --!< Resource busy input for the matrix multiply control unit.
-        MATRIX_INSTRUCTION          : out INSTRUCTION_TYPE; --!< Instruction output for the matrix multiply control unit.
-        MATRIX_INSTRUCTION_EN       : out std_logic; --!< Instruction enable for the matrix multiply control unit.
+        MATRIX_BUSY                 :  in std_logic; --!< Flag de ocupado para o input da matrix multiply control unit.
+        MATRIX_RESOURCE_BUSY        :  in std_logic; --!< Flag de ocupado para o Resource input da matrix multiply control unit.
+        MATRIX_INSTRUCTION          : out INSTRUCTION_TYPE; --!< Instrução de Saida para a matrix multiply control unit.
+        MATRIX_INSTRUCTION_EN       : out std_logic; --!< Instrução de Saida para a matrix multiply control unit.
         
-        ACTIVATION_BUSY             :  in std_logic; --!< Busy input for the activation control unit.
-        ACTIVATION_RESOURCE_BUSY    :  in std_logic; --!< Resource busy input for the activation control unit.
-        ACTIVATION_INSTRUCTION      : out INSTRUCTION_TYPE; --!< Instruction output for the activation control unit.
-        ACTIVATION_INSTRUCTION_EN   : out std_logic; --!< Instruction enable for the activation control unit.
+        ACTIVATION_BUSY             :  in std_logic; --!< Flag de ocupado para o input da activation control unit.
+        ACTIVATION_RESOURCE_BUSY    :  in std_logic; --!< Flag de ocupado para o Resource input da activation control unit.
+        ACTIVATION_INSTRUCTION      : out INSTRUCTION_TYPE; --!< Instrução de Saida para a activation control unit.
+        ACTIVATION_INSTRUCTION_EN   : out std_logic; --!< Instrução de Saida para a activation control unit.
         
-        SYNCHRONIZE                 : out std_logic --!< Will be asserted, when a synchronize instruction was feeded and all units are finished.
+        SYNCHRONIZE                 : out std_logic --!< Sera TRUE, quando uma instrução síncrona foi inserida e todas as unidades estão finalizadas.
     );
 end entity CONTROL_COORDINATOR;
 
 --! @brief The architecture of the control coordinator component.
-architecture BEH of CONTROL_COORDINATOR is    
-    signal EN_FLAGS_cs : std_logic_vector(0 to 3) := (others => '0'); -- Decoded enable - 0: WEIGHT 1: MATRIX 2: ACTIVATION 3: SYNCHRONIZE
+architecture BEH of CONTROL_COORDINATOR is
+    -- Flag de Decodificação no formato "0000"   
+    signal EN_FLAGS_cs : std_logic_vector(0 to 3) := (others => '0'); -- 0: WEIGHT 1: MATRIX 2: ACTIVATION 3: SYNCHRONIZE
     signal EN_FLAGS_ns : std_logic_vector(0 to 3);
     
-    signal INSTRUCTION_cs : INSTRUCTION_TYPE := INIT_INSTRUCTION;
+    -- Regitradores de Instruções
+    signal INSTRUCTION_cs : INSTRUCTION_TYPE := INIT_INSTRUCTION; -- Inicializado com a funçao INIT_INSTRUCTION que é todas os dados da INSTRUCTION é "0"
     signal INSTRUCTION_ns : INSTRUCTION_TYPE;
     
+    -- Registradores de Flag de ativação de Instruções
     signal INSTRUCTION_EN_cs : std_logic := '0';
     signal INSTRUCTION_EN_ns : std_logic;
     
+    -- Flag que informa se há ou não uma instrução executando
     signal INSTRUCTION_RUNNING : std_logic;
 begin
+    -- Carregamento de uma nova Instrução e do seu ativador
     INSTRUCTION_ns <= INSTRUCTION;
     INSTRUCTION_EN_ns <= INSTRUCTION_EN;
+
+    -- Sinal se a Unit esta ocupada
     BUSY <= INSTRUCTION_RUNNING;
     
     DECODE:
@@ -81,19 +87,19 @@ begin
         variable INSTRUCTION_v : INSTRUCTION_TYPE;
         
         variable EN_FLAGS_ns_v : std_logic_vector(0 to 3);
-        variable SET_SYNCHRONIZE_v : std_logic;
+        variable SET_SYNCHRONIZE_v : std_logic; -- Não é usada?
     begin
         INSTRUCTION_v := INSTRUCTION;
 
-        if    INSTRUCTION_v.OP_CODE  = x"FF" then -- synchronize
+        if    INSTRUCTION_v.OP_CODE  = x"FF" then -- Quando uma instrução síncrona foi inserida e todas as unidades estão finalizadas.
             EN_FLAGS_ns_v := "0001";
-        elsif INSTRUCTION_v.OP_CODE(7) = '1' then -- activate
+        elsif INSTRUCTION_v.OP_CODE(7) = '1' then -- unidade controla o fluxo de dados dos acumuladores.
             EN_FLAGS_ns_v := "0010";
-        elsif INSTRUCTION_v.OP_CODE(5) = '1' then -- matrix_multiply
+        elsif INSTRUCTION_v.OP_CODE(5) = '1' then -- Unidade que controla a Multiplicação de Matrizes junto com o Systolic Data
             EN_FLAGS_ns_v := "0100";
-        elsif INSTRUCTION_v.OP_CODE(3) = '1' then -- load_weight
+        elsif INSTRUCTION_v.OP_CODE(3) = '1' then -- Unidade que controla o carregamento dos pesos.
             EN_FLAGS_ns_v := "1000";
-        else -- probably nop
+        else -- Nenhuma operação
             EN_FLAGS_ns_v := "0000";
         end if;
         
@@ -102,6 +108,7 @@ begin
     
     RUNNING_DETECT:
     process(INSTRUCTION_cs, INSTRUCTION_EN_cs, EN_FLAGS_cs, WEIGHT_BUSY, MATRIX_BUSY, ACTIVATION_BUSY, WEIGHT_RESOURCE_BUSY, MATRIX_RESOURCE_BUSY, ACTIVATION_RESOURCE_BUSY) is
+        -- Variaveis para os sinais de entrada
         variable INSTRUCTION_v      : INSTRUCTION_TYPE;
         variable INSTRUCTION_EN_v   : std_logic;
         variable EN_FLAGS_v         : std_logic_vector(0 to 3);
@@ -112,12 +119,14 @@ begin
         variable MATRIX_RESOURCE_BUSY_v     : std_logic;
         variable ACTIVATION_RESOURCE_BUSY_v : std_logic;
         
+        -- Variaveis para os sinais de Saida
         variable WEIGHT_INSTRUCTION_EN_v        : std_logic;
         variable MATRIX_INSTRUCTION_EN_v        : std_logic;
         variable ACTIVATION_INSTRUCTION_EN_v    : std_logic;
         variable INSTRUCTION_RUNNING_v          : std_logic;
         variable SYNCHRONIZE_v                  : std_logic;
     begin
+        -- Carregamento da Instrução e de FLAGS
         INSTRUCTION_v       := INSTRUCTION_cs;
         INSTRUCTION_EN_v    := INSTRUCTION_EN_cs;
         EN_FLAGS_v          := EN_FLAGS_cs;
@@ -128,12 +137,13 @@ begin
         MATRIX_RESOURCE_BUSY_v     := MATRIX_RESOURCE_BUSY;
         ACTIVATION_RESOURCE_BUSY_v := ACTIVATION_RESOURCE_BUSY;
         
-        if INSTRUCTION_EN_v = '1' then
-            if EN_FLAGS_v(3) = '1' then
-                if WEIGHT_RESOURCE_BUSY_v     = '1'
-                or MATRIX_RESOURCE_BUSY_v     = '1'
+        if INSTRUCTION_EN_v = '1' then -- Se houver instrução a ser executada
+            if EN_FLAGS_v(3) = '1' then -- Se a flag todas as unidades estiverem finalizadas
+                -- Se alguma unidade estiver Ocupada
+                if WEIGHT_RESOURCE_BUSY_v = '1' 
+                or MATRIX_RESOURCE_BUSY_v = '1' 
                 or ACTIVATION_RESOURCE_BUSY_v = '1' then
-                    INSTRUCTION_RUNNING_v       := '1';
+                    INSTRUCTION_RUNNING_v       := '1'; -- Então a Flag de instrução é ativada
                     WEIGHT_INSTRUCTION_EN_v     := '0';
                     MATRIX_INSTRUCTION_EN_v     := '0';
                     ACTIVATION_INSTRUCTION_EN_v := '0';
@@ -143,26 +153,28 @@ begin
                     WEIGHT_INSTRUCTION_EN_v     := '0';
                     MATRIX_INSTRUCTION_EN_v     := '0';
                     ACTIVATION_INSTRUCTION_EN_v := '0';
-                    SYNCHRONIZE_v               := '1';
+                    SYNCHRONIZE_v               := '1'; -- Senão todos estão sincronizados
                 end if;
             else
+                -- Senão, se 
                 if (WEIGHT_BUSY_v     = '1' and  EN_FLAGS_v(0) = '1')
-                or (MATRIX_BUSY_v     = '1' and (EN_FLAGS_v(1) = '1' or EN_FLAGS_v(2) = '1')) -- Activation waits for matrix multiply to finish
+                or (MATRIX_BUSY_v     = '1' and (EN_FLAGS_v(1) = '1' or EN_FLAGS_v(2) = '1')) -- Activation espera que a MMU termine
                 or (ACTIVATION_BUSY_v = '1' and  EN_FLAGS_v(2) = '1') then
-                    INSTRUCTION_RUNNING_v       := '1';
+                    INSTRUCTION_RUNNING_v       := '1'; -- Então a Flag de instrução é ativada
                     WEIGHT_INSTRUCTION_EN_v     := '0';
                     MATRIX_INSTRUCTION_EN_v     := '0';
                     ACTIVATION_INSTRUCTION_EN_v := '0';
                     SYNCHRONIZE_v               := '0';
                 else
-                    INSTRUCTION_RUNNING_v       := '0';
+                    INSTRUCTION_RUNNING_v       := '0'; -- Não Há Instrução sendo Realizada
+                    -- As Flags de ativação são passadas 
                     WEIGHT_INSTRUCTION_EN_v     := EN_FLAGS_v(0);
                     MATRIX_INSTRUCTION_EN_v     := EN_FLAGS_v(1);
                     ACTIVATION_INSTRUCTION_EN_v := EN_FLAGS_v(2);
                     SYNCHRONIZE_v               := '0';
                 end if;
             end if;
-        else
+        else -- Default
             INSTRUCTION_RUNNING_v       := '0';
             WEIGHT_INSTRUCTION_EN_v     := '0';
             MATRIX_INSTRUCTION_EN_v     := '0';
@@ -176,7 +188,8 @@ begin
         ACTIVATION_INSTRUCTION_EN   <= ACTIVATION_INSTRUCTION_EN_v;
         SYNCHRONIZE                 <= SYNCHRONIZE_v;
     end process RUNNING_DETECT;
-        
+    
+    -- Carrega as Instruções
     WEIGHT_INSTRUCTION      <= TO_WEIGHT_INSTRUCTION(INSTRUCTION_cs);
     MATRIX_INSTRUCTION      <= INSTRUCTION_cs;
     ACTIVATION_INSTRUCTION  <= INSTRUCTION_cs;
@@ -189,7 +202,7 @@ begin
                 EN_FLAGS_cs <= (others => '0');
                 INSTRUCTION_cs <= INIT_INSTRUCTION;
                 INSTRUCTION_EN_cs <= '0';
-            else
+            else -- Carrega uma nova instrução, caso não haja uma
                 if INSTRUCTION_RUNNING = '0' and ENABLE = '1' then
                     EN_FLAGS_cs <= EN_FLAGS_ns;
                     INSTRUCTION_cs <= INSTRUCTION_ns;

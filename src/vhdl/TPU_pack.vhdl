@@ -26,7 +26,9 @@ library IEEE;
 package TPU_PACK is
     constant BYTE_WIDTH : natural := 8;
     constant EXTENDED_BYTE_WIDTH : natural := BYTE_WIDTH+1;
-    
+    constant NUMBER_OF_MULT : natural := 2; -- Este Valor deve sempre ser MULTIPLO DE 2
+    constant SHIFT_VALUE    : natural := 1; -- Esse 2 elevado a este valor resulta em NUMBER_OF_MULT
+
     subtype BYTE_TYPE is std_logic_vector(BYTE_WIDTH-1 downto 0);
     subtype EXTENDED_BYTE_TYPE is std_logic_vector(EXTENDED_BYTE_WIDTH-1 downto 0);
     subtype MUL_HALFWORD_TYPE is std_logic_vector(2*EXTENDED_BYTE_WIDTH-1 downto 0);
@@ -39,9 +41,11 @@ package TPU_PACK is
     type BYTE_ARRAY_2D_TYPE is array(natural range <>, natural range <>) of BYTE_TYPE;
     type EXTENDED_BYTE_ARRAY is array(natural range <>) of EXTENDED_BYTE_TYPE;
     type HALFWORD_ARRAY_TYPE is array(natural range <>) of HALFWORD_TYPE;
+    type MUL_HALFWORD_ARRAY_TYPE is array(natural range <>) of MUL_HALFWORD_TYPE;
     type WORD_ARRAY_TYPE is array(natural range <>) of WORD_TYPE;
     type WORD_ARRAY_2D_TYPE is array(natural range <>, natural range <>) of WORD_TYPE;
-    
+    type BYTE_ARRAY_3D_TYPE is array(natural range <>, natural range <>, natural range<>) of BYTE_TYPE;
+
     -- Good for readable testbenches
     type INTEGER_ARRAY_2D_TYPE is array(natural range <>, natural range <>) of integer;
     
@@ -142,7 +146,7 @@ package body TPU_PACK is
         return BYTE_ARRAY;
     end function BITS_TO_BYTE_ARRAY;
     
-    function BYTE_ARRAY_TO_BITS(BYTE_ARRAY : BYTE_ARRAY_TYPE) return std_logic_vector is
+    function BYTE_ARRAY_TO_BITS(BYTE_ARRAY : BYTE_ARRAY_TYPE) return std_logic_vector is 
         variable BITVECTOR : std_logic_vector(((BYTE_ARRAY'LENGTH * BYTE_WIDTH)-1) downto 0);
     begin
         for i in BYTE_ARRAY'RANGE loop
@@ -155,7 +159,7 @@ package body TPU_PACK is
     function BITS_TO_WORD_ARRAY(BITVECTOR : std_logic_vector) return WORD_ARRAY_TYPE is
         variable WORD_ARRAY : WORD_ARRAY_TYPE(0 to ((BITVECTOR'LENGTH / (4*BYTE_WIDTH))-1));
     begin
-        for i in WORD_ARRAY'RANGE loop
+        for i in WORD_ARRAY'RANGE loop -- WORD_ARRAY'LEFT to WORD_ARRAY'RIGHT 
                 WORD_ARRAY(i) := BITVECTOR(i*4*BYTE_WIDTH + 4*BYTE_WIDTH-1 downto i*4*BYTE_WIDTH);
         end loop;
         

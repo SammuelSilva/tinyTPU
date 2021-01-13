@@ -36,7 +36,7 @@ architecture BEH of TB_TPU is
             CLK, RESET              : in  std_logic;
             ENABLE                  : in  std_logic;
             -- For data width check - 0 to 255 => width: 1 to 256
-            TPU_MAX_INDEX           : out BYTE_TYPE;
+            --TPU_MAX_INDEX           : out BYTE_TYPE;
             -- Splitted instruction input
             LOWER_INSTRUCTION_WORD  : in  WORD_TYPE;
             MIDDLE_INSTRUCTION_WORD : in  WORD_TYPE;
@@ -68,7 +68,7 @@ architecture BEH of TB_TPU is
     signal RESET                    : std_logic;
     signal ENABLE                   : std_logic;
         
-    signal TPU_MAX_INDEX            : BYTE_TYPE;
+    --signal TPU_MAX_INDEX            : BYTE_TYPE;
         
     signal LOWER_INSTRUCTION_WORD   : WORD_TYPE;
     signal MIDDLE_INSTRUCTION_WORD  : WORD_TYPE;
@@ -106,7 +106,7 @@ begin
         CLK => CLK,
         RESET => RESET,
         ENABLE => ENABLE,
-        TPU_MAX_INDEX => TPU_MAX_INDEX,
+        --TPU_MAX_INDEX => TPU_MAX_INDEX,
         LOWER_INSTRUCTION_WORD => LOWER_INSTRUCTION_WORD,
         MIDDLE_INSTRUCTION_WORD => MIDDLE_INSTRUCTION_WORD,
         UPPER_INSTRUCTION_WORD => UPPER_INSTRUCTION_WORD,

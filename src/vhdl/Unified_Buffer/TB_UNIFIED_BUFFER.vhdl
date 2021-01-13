@@ -30,137 +30,142 @@ end entity TB_UNIFIED_BUFFER;
 architecture BEH of TB_UNIFIED_BUFFER is
     component DUT is
         generic(
-            MATRIX_WIDTH    : natural := 14;
-            -- How many tiles(MATRIX_WIDTH^2) can be saved
-            TILE_WIDTH      : natural := 1024
+        MATRIX_WIDTH    : natural := 14;
+        -- How many tiles can be saved
+        TILE_WIDTH      : natural := 4096 --!< The depth of the buffer.
         );
         port(
-            CLK             : in  std_logic;
-            -- Port0
-            ADDRESS0        : in  BUFFER_ADDRESS_TYPE;
-            EN0             : in  std_logic;
-            WRITE_EN0       : in  std_logic;
-            WRITE_PORT0     : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
-            READ_PORT0      : out BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
-            -- Port1
-            ADDRESS1        : in  BUFFER_ADDRESS_TYPE;
-            EN1             : in  std_logic;
-            WRITE_EN1       : in  std_logic;
-            WRITE_PORT1     : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
-            READ_PORT1      : out BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1)
+            CLK, RESET      : in  std_logic;
+            ENABLE          : in  std_logic;
+            
+            -- Master port - Possui maior importancia que outras portas
+            MASTER_ADDRESS      : in  BUFFER_ADDRESS_TYPE; --!< Endereço do Mestre(host), Possui maior importancia que outros Endereçamentos.
+            MASTER_EN           : in  std_logic; --!< Mestre(host) enable, Possui maior importancia que outras Ativações.
+            MASTER_WRITE_EN     : in  std_logic_vector(0 to MATRIX_WIDTH-1); --!< Mestre(host) write enable, Possui maior importancia que outras ativações de escrita.
+            MASTER_WRITE_PORT   : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< Mestre(host) write port, Possui maior importancia que outras Portas de Escrita.
+            MASTER_READ_PORT    : out BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< Mestre(host) read port, Possui maior importancia que outras Portas de Leitura.
+
+            -- Port0, so é possivel a realização de leitura
+            ADDRESS0        : in  BUFFER_ADDRESS_TYPE; --!< Endereço da porta 0.
+            EN0             : in  std_logic; --!< Ativação da porta 0.
+            READ_PORT0      : out BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< Leitura da porta 0.
+
+            -- Port1, só é possivel a realização de escrita.
+            ADDRESS1        : in  BUFFER_ADDRESS_TYPE; --!< Endereço da porta 1.
+            EN1             : in  std_logic; --!< Ativação da porta 1.
+            WRITE_EN1       : in  std_logic; --!< Ativação de escrita da porta 1.
+            WRITE_PORT1     : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1) --!< Escrita da porta 1.
         );
     end component DUT;
     for all : DUT use entity WORK.UNIFIED_BUFFER(BEH);
     
-    constant MATRIX_WIDTH   : natural := 4;
-    constant TILE_WIDTH     : natural := 2;
+    constant MATRIX_WIDTH    : natural := 14;
+    constant TILE_WIDTH      : natural := 4096;
     
-    signal CLK          : std_logic;
-    signal ADDRESS0     : BUFFER_ADDRESS_TYPE;
-    signal EN0          : std_logic;
-    signal WRITE_EN0    : std_logic;
-    signal WRITE_PORT0  : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
-    signal READ_PORT0   : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
-    signal ADDRESS1     : BUFFER_ADDRESS_TYPE;
-    signal EN1          : std_logic;
-    signal WRITE_EN1    : std_logic;
-    signal WRITE_PORT1  : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
-    signal READ_PORT1   : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
+    signal CLK               : std_logic;
+    signal RESET             : std_logic;
+    signal ENABLE            : std_logic;
+
+    signal MASTER_ADDRESS    : BUFFER_ADDRESS_TYPE;  
+    signal MASTER_EN         : std_logic;       
+    signal MASTER_WRITE_EN   : std_logic_vector(0 to MATRIX_WIDTH-1);   
+    signal MASTER_WRITE_PORT : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);      
+    signal MASTER_READ_PORT  : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); 
+
+    signal ADDRESS0          : BUFFER_ADDRESS_TYPE;
+    signal EN0               : std_logic;
+    signal READ_PORT0        : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
+
+    signal ADDRESS1          : BUFFER_ADDRESS_TYPE;
+    signal EN1               : std_logic;
+    signal WRITE_EN1         : std_logic;
+    signal WRITE_PORT1       : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
     
     -- for clock gen
-    constant clock_period   : time := 10 ns;
-    signal stop_the_clock   : boolean;
+    constant clock_period    : time := 10 ns;
+    signal stop_the_clock    : boolean;
 begin
 
     DUT_i : DUT
     generic map(
-        MATRIX_WIDTH => MATRIX_WIDTH,
-        TILE_WIDTH => TILE_WIDTH
+        MATRIX_WIDTH      => MATRIX_WIDTH,
+        TILE_WIDTH        => TILE_WIDTH
     )
     port map(
-        CLK => CLK,
-        ADDRESS0 => ADDRESS0,
-        EN0 => EN0,
-        WRITE_EN0 => WRITE_EN0,
-        WRITE_PORT0 => WRITE_PORT0,
-        READ_PORT0 => READ_PORT0,
-        ADDRESS1 => ADDRESS1,
-        EN1 => EN1,
-        WRITE_EN1 => WRITE_EN1,
-        WRITE_PORT1 => WRITE_PORT1,
-        READ_PORT1 => READ_PORT1
+        CLK               => CLK,
+        RESET             => RESET,
+        ENABLE            => ENABLE,
+
+        MASTER_ADDRESS    => MASTER_ADDRESS,  
+        MASTER_EN         => MASTER_EN,       
+        MASTER_WRITE_EN   => MASTER_WRITE_EN, 
+        MASTER_WRITE_PORT => MASTER_WRITE_PORT,      
+        MASTER_READ_PORT  => MASTER_READ_PORT, 
+
+        ADDRESS0          => ADDRESS0,
+        EN0               => EN0,
+        READ_PORT0        => READ_PORT0,
+
+        ADDRESS1          => ADDRESS1,        
+        EN1               => EN1,
+        WRITE_EN1         => WRITE_EN1,
+        WRITE_PORT1       => WRITE_PORT1
     );
     
     STIMULUS:
     process is
     begin
+        ENABLE <= '0';
+        RESET <= '0';
+
         ADDRESS0 <= (others => '0');
-        EN0 <= '0';
-        WRITE_EN0 <= '0';
-        WRITE_PORT0 <= (others => (others => '0'));
         ADDRESS1 <= (others => '0');
+        EN0 <= '0';
         EN1 <= '0';
         WRITE_EN1 <= '0';
         WRITE_PORT1 <= (others => (others => '0'));
-        wait until '1'=CLK and CLK'event;
-        -- TEST write to memory through port0
-        for i in 0 to TILE_WIDTH*MATRIX_WIDTH-1 loop
-            ADDRESS0 <= std_logic_vector(to_unsigned(i, 3*BYTE_WIDTH));
-            EN0 <= '1';
-            WRITE_EN0 <= '1';
+        
+        wait until '1'= CLK and CLK'event;
+        RESET <= '1';
+        wait until '1'= CLK and CLK'event;
+        RESET <= '0';
+
+        -- TEST write to memory through MASTER
+
+        MASTER_EN <= '1';
+        for i in 0 to 5 loop
+            MASTER_ADDRESS <= std_logic_vector(to_unsigned(i, 3*BYTE_WIDTH));
+            MASTER_WRITE_EN <= (std_logic_vector(to_unsigned(i, MATRIX_WIDTH)));
             for j in 0 to MATRIX_WIDTH-1 loop
-                WRITE_PORT0(j) <= std_logic_vector(to_unsigned(i*j, BYTE_WIDTH));
+                MASTER_WRITE_PORT(j) <= std_logic_vector(to_unsigned(j*(i+1), BYTE_WIDTH));
             end loop;
             wait until '1'=CLK and CLK'event;
         end loop;
-        EN0 <= '0';
-        WRITE_EN0 <= '0';
+
+        wait until '1' = CLK and CLK'event;
+
+        MASTER_EN <= '0';
+
+        --CHECK      
+        ENABLE <= '1';  
+        EN0 <= '1';
         
-        -- TEST read from memory through port0
-        for i in 0 to TILE_WIDTH*MATRIX_WIDTH-1 loop
+        for i in 0 to 5 loop
             ADDRESS0 <= std_logic_vector(to_unsigned(i, 3*BYTE_WIDTH));
-            EN0 <= '1';
-            wait until '1'=CLK and CLK'event;
             for j in 0 to MATRIX_WIDTH-1 loop
                 wait for 1 ns;
-                if READ_PORT0(j) /= std_logic_vector(to_unsigned(i*j, BYTE_WIDTH)) then
-                    report "Error reading memory through port0!" severity ERROR;
-                    stop_the_clock <= true;
-                    wait;
+                if READ_PORT0(j) /= std_logic_vector(to_unsigned(j*(i+1), BYTE_WIDTH)) then
+                    report "Error reading memory through port1!";
+                    --stop_the_clock <= true;
+                    --wait;
                 end if;
             end loop;
+            wait until '1'=CLK and CLK'event;
         end loop;
+
+        ENABLE <= '0';
         EN0 <= '0';
-        
-        wait until '1'=CLK and CLK'event;
-        -- TEST write to memory through port1
-        for i in 0 to TILE_WIDTH*MATRIX_WIDTH-1 loop
-            ADDRESS1 <= std_logic_vector(to_unsigned(i, 3*BYTE_WIDTH));
-            EN1 <= '1';
-            WRITE_EN1 <= '1';
-            for j in 0 to MATRIX_WIDTH-1 loop
-                WRITE_PORT1(j) <= std_logic_vector(to_unsigned(i*j+128, BYTE_WIDTH));
-            end loop;
-            wait until '1'=CLK and CLK'event;
-        end loop;
-        EN1 <= '0';
-        WRITE_EN1 <= '0';
-        
-        -- TEST read from memory through port1
-        for i in 0 to TILE_WIDTH*MATRIX_WIDTH-1 loop
-            ADDRESS1 <= std_logic_vector(to_unsigned(i, 3*BYTE_WIDTH));
-            EN1 <= '1';
-            wait until '1'=CLK and CLK'event;
-            for j in 0 to MATRIX_WIDTH-1 loop
-                wait for 1 ns;
-                if READ_PORT1(j) /= std_logic_vector(to_unsigned(i*j+128, BYTE_WIDTH)) then
-                    report "Error reading memory through port1!" severity ERROR;
-                    stop_the_clock <= true;
-                    wait;
-                end if;
-            end loop;
-        end loop;
-        EN1 <= '0';
+        wait until '1' = CLK and CLK'event;
         
         report "Test was successful!" severity NOTE;
         stop_the_clock <= true;
