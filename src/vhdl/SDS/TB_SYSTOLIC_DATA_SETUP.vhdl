@@ -41,7 +41,7 @@ architecture BEH of TB_SYSTOLIC_DATA_SETUP is
     end component DUT;    
     for all : DUT use entity WORK.SYSTOLIC_DATA_SETUP(BEH);
     
-    constant MATRIX_WIDTH     : natural := 10;
+    constant MATRIX_WIDTH   : natural := 14;
     signal CLK, RESET       : std_logic;
     signal ENABLE           : std_logic;
     signal DATA_INPUT       : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
@@ -52,19 +52,23 @@ architecture BEH of TB_SYSTOLIC_DATA_SETUP is
     signal stop_the_clock   : boolean := false;
     signal evaluate         : boolean;
     
-    constant INPUT_MATRIX   : NATURAL_ARRAY_2D_TYPE :=
-        (   
-            ( 1,  2,  3,  4,  5),
-            ( 6,  7,  8,  9, 10),
-            (11, 12, 13, 14, 15),
-            (16, 17, 18, 19, 20),
-            (21, 22, 23, 24, 25),
-            (26, 27, 28, 29, 30),
-            (31, 32, 33, 34, 35),
-            (36, 37, 38, 39, 40),
-            (41, 42, 43, 44, 45),
-            (46, 47, 48, 49, 50)
-        );
+    constant INPUT_MATRIX   : INTEGER_ARRAY_2D_TYPE :=(
+        ( 40,  76,  19, 192, 0),
+        (  3,  84,  12,   8, 1),
+        ( 54,  18, 255, 120, 0),
+        ( 30,  84, 122,   2, 1),
+        (  0,   1,   1,   1, 1),
+        ( 40,  76,  19, 192, 0),
+        (  3,  84,  12,   8, 1),
+        ( 54,  18, 255, 120, 0),
+        ( 30,  84, 122,   2, 1),
+        (  0,   1,   1,   1, 1),
+        (  3,  84,  12,   8, 1),
+        ( 54,  18, 255, 120, 0),
+        ( 30,  84, 122,   2, 1),
+        (  0,   1,   1,   1, 1)
+    );
+  
     
 begin
     DUT_i : DUT
@@ -92,14 +96,15 @@ begin
         RESET <= '0';
         wait until '1'=CLK and CLK'event;
         ENABLE <= '1';
-        for i in 0 to 4 loop
-            for j in 0 to 9 loop
-                DATA_INPUT(j) <= std_logic_vector(to_unsigned(INPUT_MATRIX(j, i), BYTE_WIDTH)); 
+        for i in 0 to 13 loop
+            for j in 0 to 4 loop
+                DATA_INPUT(j) <= std_logic_vector(to_unsigned(INPUT_MATRIX(i, j), BYTE_WIDTH)); 
             end loop;
             evaluate <= true;
             wait until '1'=CLK and CLK'event;
         end loop;
         wait;
+        stop_the_clock <= true;
     end process STIMULUS;
     
     

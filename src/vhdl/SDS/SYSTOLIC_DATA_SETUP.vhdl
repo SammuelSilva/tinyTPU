@@ -21,7 +21,7 @@
 
 --! @file SYSTOLIC_DATA_SETUP.vhdl
 --! @author Jonas Fuhrmann
---! @brief This component takes a byte array and diagonalizes it for the matrix multiply unit.
+--! Este componente recebe um Byte Array e o diagonaliza para a ser usado na MMU.
 
 use WORK.TPU_pack.all;
 library IEEE;
@@ -35,63 +35,90 @@ entity SYSTOLIC_DATA_SETUP is
     port(
         CLK, RESET      : in  std_logic;
         ENABLE          : in  std_logic;
-        DATA_INPUT      : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< The byte array input to be diagonalized.
-        SYSTOLIC_OUTPUT : out BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1) --!< The diagonalized output.
+        DATA_INPUT      : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< A entrada byte array a ser diagonalizada.
+        SYSTOLIC_OUTPUT : out BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1) --!< Saida diagonalizada.
     );
 end entity SYSTOLIC_DATA_SETUP;
 
 --! @brief Architecture of the systolic data setup component.
 architecture BEH of SYSTOLIC_DATA_SETUP is
-    signal BUFFER_REG_cs : BYTE_ARRAY_2D_TYPE(1 to MATRIX_WIDTH-1, 1 to MATRIX_WIDTH-1) := (others => (others => (others => '0')));
-    signal BUFFER_REG_ns : BYTE_ARRAY_2D_TYPE(1 to MATRIX_WIDTH-1, 1 to MATRIX_WIDTH-1);
+    -- Fila da matriz de Byte Array
+    signal BUFFER_REG_cs : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1, 0 to NUMBER_OF_MULT-1) := (others => (others => (others => (others => '0'))));
+    signal BUFFER_REG_ns : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1, 0 to NUMBER_OF_MULT-1);
 begin
     
+    INPUT_GEN:
+    for k in 0 to NUMBER_OF_MULT-1 generate
+        SYSTOLIC_OUTPUT(k) <= DATA_INPUT(k);
+    end generate INPUT_GEN; 
+
+    -- Registro responsavel por pegar o DATA_INPUT(1, j) e o inserir no BUFFER_REG e fazer um deslizamento dos dados que ja estavam no buffer
     SHIFT_REG:
     process(DATA_INPUT, BUFFER_REG_cs) is
-        variable DATA_INPUT_v       : BYTE_ARRAY_TYPE(1 to MATRIX_WIDTH-1);
-        variable BUFFER_REG_cs_v    : BYTE_ARRAY_2D_TYPE(1 to MATRIX_WIDTH-1, 1 to MATRIX_WIDTH-1);
-        variable BUFFER_REG_ns_v    : BYTE_ARRAY_2D_TYPE(1 to MATRIX_WIDTH-1, 1 to MATRIX_WIDTH-1);
+        variable DATA_INPUT_v       : BYTE_ARRAY_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1);
+        variable BUFFER_REG_cs_v    : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1, 0 to NUMBER_OF_MULT-1);
+        variable BUFFER_REG_ns_v    : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1, 0 to NUMBER_OF_MULT-1);
+        variable FLAG_v             : std_logic;
     begin
-        DATA_INPUT_v := DATA_INPUT(1 to MATRIX_WIDTH-1);
+        -- Atribui os dados para as variaveis, o DATA_INPUT_V recebe os dados de DATA_INPUT exceto os contidos na posição 0.
+        DATA_INPUT_v := DATA_INPUT(NUMBER_OF_MULT to MATRIX_WIDTH-1);
         BUFFER_REG_cs_v := BUFFER_REG_cs;
-        
-        for i in 1 to MATRIX_WIDTH-1 loop
-            for j in 1 to MATRIX_WIDTH-1 loop
-                if i = 1 then
-                    BUFFER_REG_ns_v(i, j) := DATA_INPUT_v(j);
-                else
-                    BUFFER_REG_ns_v(i, j) := BUFFER_REG_cs_v(i-1, j);
+        FLAG_v := '1';
+
+        for j in NUMBER_OF_MULT to MATRIX_WIDTH-1 loop
+            for k in 0 to NUMBER_OF_MULT-1 loop
+                if FLAG_V = '1' then 
+                    if (k + j) <= MATRIX_WIDTH-1 then
+                        BUFFER_REG_ns_v(NUMBER_OF_MULT, (j/NUMBER_OF_MULT) + 1, k) := DATA_INPUT_v(j + k); -- A posição 1 do buffer é atualizado com o valor de DATA_INPUT
+                    end if;
                 end if;
             end loop;
+            FLAG_v := not FLAG_v;
         end loop;
         
-        BUFFER_REG_ns <= BUFFER_REG_ns_v;
+        for i in NUMBER_OF_MULT+1 to MATRIX_WIDTH-1 loop
+            for j in NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1 loop
+                for k in 0 to NUMBER_OF_MULT-1 loop
+                    BUFFER_REG_ns_v(i, j, k) := BUFFER_REG_cs_v(i-1, j, k); -- Copia da posição 2 para frente os dados contidos no registrador atual para o proximo
+                end loop;
+            end loop;
+        end loop;
+
+        -- Registrador Proximo recebe o Registrador_v atualizado com o DATA_INPUT na diagonal e os demais dados contidos no registrador atual
+        BUFFER_REG_ns <= BUFFER_REG_ns_v; 
     end process SHIFT_REG;
-    
-    SYSTOLIC_OUTPUT(0) <= DATA_INPUT(0);
     
     SYSTOLIC_PROCESS:
     process(BUFFER_REG_cs) is
-        variable BUFFER_REG_cs_v    : BYTE_ARRAY_2D_TYPE(1 to MATRIX_WIDTH-1, 1 to MATRIX_WIDTH-1);
-        variable SYSTOLIC_OUTPUT_v  : BYTE_ARRAY_TYPE(1 to MATRIX_WIDTH-1);
+        variable BUFFER_REG_cs_v    :BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1, 0 to NUMBER_OF_MULT-1);
+        variable SYSTOLIC_OUTPUT_v  : BYTE_ARRAY_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1);
+        variable FLAG_v             : std_logic;
     begin
-        BUFFER_REG_cs_v := BUFFER_REG_cs;
-        
-        for i in 1 to MATRIX_WIDTH-1 loop 
-            SYSTOLIC_OUTPUT_v(i) := BUFFER_REG_cs_v(i, i);
+        BUFFER_REG_cs_v := BUFFER_REG_cs; -- Carrega o BUFFER atual em sua variavel
+        FLAG_v := '1';
+
+        for i in NUMBER_OF_MULT to MATRIX_WIDTH-1 loop
+            if FLAG_v = '1' then
+                for k in 0 to NUMBER_OF_MULT-1 loop
+                    if (k + i) <= MATRIX_WIDTH-1 then
+                        SYSTOLIC_OUTPUT_v(i + k) := BUFFER_REG_cs_v((i/NUMBER_OF_MULT) + 1, (i/NUMBER_OF_MULT) + 1, k); -- Pegas os valores na diagonal do BUFFER_REG_cs e insere no systolic_output_v
+                    end if;
+                end loop;
+            end if;
+            FLAG_v := not FLAG_v;
         end loop;
         
-        SYSTOLIC_OUTPUT(1 to MATRIX_WIDTH-1) <= SYSTOLIC_OUTPUT_v;
+        SYSTOLIC_OUTPUT(NUMBER_OF_MULT to MATRIX_WIDTH-1) <= SYSTOLIC_OUTPUT_v; -- Carrega o Systolic Output
     end process SYSTOLIC_PROCESS;
-    
+
     SEQ_LOG:
     process(CLK) is
     begin
         if CLK'event and CLK = '1' then
             if RESET = '1' then
-                BUFFER_REG_cs <= (others => (others => (others => '0')));
+                BUFFER_REG_cs <= (others => (others => (others => (others => '0'))));
             else
-                if ENABLE = '1' then
+                if ENABLE = '1' then -- Caso esteja ativado carrega o Proximo Registro que vem do SHIFT_REG
                     BUFFER_REG_cs <= BUFFER_REG_ns;
                 end if;
             end if;
