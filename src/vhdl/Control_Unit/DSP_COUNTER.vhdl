@@ -50,7 +50,7 @@ end entity DSP_COUNTER;
 
 --! @brief The architecture of the DSP counter component.
 architecture BEH of DSP_COUNTER is
-    constant ADD_ONE  : unsigned(COUNTER_WIDTH-1 downto 0) := (COUNTER_WIDTH-1 downto 1 => '0')&'1';
+    constant ADD_TWO  : unsigned(COUNTER_WIDTH-1 downto 0) := (COUNTER_WIDTH-1 downto 2 => '0')&'1'&'0';
 
     signal COUNTER : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (others => '0'); -- Contador
     signal END_REG : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (others => '0'); -- Registro do valor final
@@ -97,7 +97,7 @@ begin
                 EVENT_PIPE_cs <= '0';
             else
                 if ENABLE = '1' then
-                    COUNTER <= std_logic_vector(unsigned(COUNTER) + ADD_ONE); -- Soma de "um em um"
+                    COUNTER <= std_logic_vector(unsigned(COUNTER) + ADD_TWO); -- Soma de "um em um" --- SOMAR DE DOIS EM DOIS
                     -- Pipe do sinal do Evento, maior parte do tempo é 0
                     EVENT_cs <= EVENT_ns;
                     EVENT_PIPE_cs <= EVENT_PIPE_ns;

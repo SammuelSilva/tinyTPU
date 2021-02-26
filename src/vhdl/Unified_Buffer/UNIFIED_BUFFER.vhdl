@@ -33,7 +33,7 @@ library IEEE;
     
 entity UNIFIED_BUFFER is
     generic(
-        MATRIX_WIDTH    : natural := 14;
+        MATRIX_WIDTH    : natural := 8;
         -- How many tiles can be saved
         TILE_WIDTH      : natural := 4096 --!< The depth of the buffer.
     );
@@ -63,13 +63,13 @@ end entity UNIFIED_BUFFER;
 
 --! @brief The architecture of the unified buffer component.
 architecture BEH of UNIFIED_BUFFER is
-    -- Arrays de registradores 14x8 para leitura das portas 0
+    -- Arrays de registradores 8x8 para leitura das portas 0
     signal READ_PORT0_REG0_cs   : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1) := (0 to MATRIX_WIDTH-1 => (BYTE_WIDTH-1 downto 0 => '0'));
     signal READ_PORT0_REG0_ns   : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
     signal READ_PORT0_REG1_cs   : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1) := (0 to MATRIX_WIDTH-1 => (BYTE_WIDTH-1 downto 0 => '0'));
     signal READ_PORT0_REG1_ns   : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
     
-    -- Arrays de registradores 14x8 para leitura das portas Mestre
+    -- Arrays de registradores 8x8 para leitura das portas Mestre
     signal MASTER_READ_PORT_REG0_cs : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1) := (0 to MATRIX_WIDTH-1 => (BYTE_WIDTH-1 downto 0 => '0'));
     signal MASTER_READ_PORT_REG0_ns : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
     signal MASTER_READ_PORT_REG1_cs : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1) := (0 to MATRIX_WIDTH-1 => (BYTE_WIDTH-1 downto 0 => '0'));
@@ -99,20 +99,20 @@ architecture BEH of UNIFIED_BUFFER is
         :=
         -- Test values
         (
-            0  => BYTE_ARRAY_TO_BITS((x"7F", x"7E", x"7D", x"7C", x"7B", x"7A", x"79", x"78", x"77", x"76", x"75", x"74", x"73", x"72")),
-            1  => BYTE_ARRAY_TO_BITS((x"71", x"70", x"6F", x"6E", x"6D", x"6C", x"6B", x"6A", x"69", x"68", x"67", x"66", x"65", x"64")),
-            2  => BYTE_ARRAY_TO_BITS((x"63", x"62", x"61", x"60", x"5F", x"5E", x"5D", x"5C", x"5B", x"5A", x"59", x"58", x"57", x"56")),
-            3  => BYTE_ARRAY_TO_BITS((x"55", x"54", x"53", x"52", x"51", x"50", x"4F", x"4E", x"4D", x"4C", x"4B", x"4A", x"49", x"48")),
-            4  => BYTE_ARRAY_TO_BITS((x"47", x"46", x"45", x"44", x"43", x"42", x"41", x"40", x"3F", x"3E", x"3D", x"3C", x"3B", x"3A")),
-            5  => BYTE_ARRAY_TO_BITS((x"39", x"38", x"37", x"36", x"35", x"34", x"33", x"32", x"31", x"30", x"2F", x"2E", x"2D", x"2C")),
-            6  => BYTE_ARRAY_TO_BITS((x"2B", x"2A", x"29", x"28", x"27", x"26", x"25", x"24", x"23", x"22", x"21", x"20", x"1F", x"1E")),
-            7  => BYTE_ARRAY_TO_BITS((x"1D", x"1C", x"1B", x"1A", x"19", x"18", x"17", x"16", x"15", x"14", x"13", x"12", x"11", x"10")),
-            8  => BYTE_ARRAY_TO_BITS((x"0F", x"0E", x"0D", x"0C", x"0B", x"0A", x"09", x"08", x"07", x"06", x"05", x"04", x"03", x"02")),
-            9  => BYTE_ARRAY_TO_BITS((x"01", x"00", x"FF", x"FE", x"FD", x"FC", x"FB", x"FA", x"F9", x"F8", x"F7", x"F6", x"F5", x"F4")),
-            10 => BYTE_ARRAY_TO_BITS((x"F3", x"F2", x"F1", x"F0", x"EF", x"EE", x"ED", x"EC", x"EB", x"EA", x"E9", x"E8", x"E7", x"E6")),
-            11 => BYTE_ARRAY_TO_BITS((x"E5", x"E4", x"E3", x"E2", x"E1", x"E0", x"DF", x"DE", x"DD", x"DC", x"DB", x"DA", x"D9", x"D8")),
-            12 => BYTE_ARRAY_TO_BITS((x"D7", x"D6", x"D5", x"D4", x"D3", x"D2", x"D1", x"D0", x"CF", x"CE", x"CD", x"CC", x"CB", x"CA")),
-            13 => BYTE_ARRAY_TO_BITS((x"C9", x"C8", x"C7", x"C6", x"C5", x"C4", x"C3", x"C2", x"C1", x"C0", x"BF", x"BE", x"BD", x"BC")),
+            0  => BYTE_ARRAY_TO_BITS((x"01", x"7E", x"7D", x"7C", x"7B", x"7A", x"79", x"78")),
+            1  => BYTE_ARRAY_TO_BITS((x"71", x"01", x"6F", x"6E", x"6D", x"6C", x"6B", x"6A")),
+            2  => BYTE_ARRAY_TO_BITS((x"63", x"62", x"01", x"60", x"5F", x"5E", x"5D", x"5C")),
+            3  => BYTE_ARRAY_TO_BITS((x"55", x"54", x"53", x"01", x"51", x"50", x"4F", x"4E")),
+            4  => BYTE_ARRAY_TO_BITS((x"47", x"46", x"45", x"44", x"01", x"42", x"41", x"40")),
+            5  => BYTE_ARRAY_TO_BITS((x"39", x"38", x"37", x"36", x"35", x"01", x"33", x"32")),
+            6  => BYTE_ARRAY_TO_BITS((x"2B", x"2A", x"29", x"28", x"27", x"26", x"01", x"24")),
+            7  => BYTE_ARRAY_TO_BITS((x"1D", x"1C", x"1B", x"1A", x"19", x"18", x"17", x"01")),
+            8  => BYTE_ARRAY_TO_BITS((x"0F", x"0E", x"0D", x"0C", x"0B", x"0A", x"09", x"08")),
+            9  => BYTE_ARRAY_TO_BITS((x"01", x"00", x"FF", x"FE", x"FD", x"FC", x"FB", x"FA")),
+            10 => BYTE_ARRAY_TO_BITS((x"F3", x"F2", x"F1", x"F0", x"EF", x"EE", x"ED", x"EC")),
+            11 => BYTE_ARRAY_TO_BITS((x"E5", x"E4", x"E3", x"E2", x"E1", x"E0", x"DF", x"DE")),
+            12 => BYTE_ARRAY_TO_BITS((x"D7", x"D6", x"D5", x"D4", x"D3", x"D2", x"D1", x"D0")),
+            13 => BYTE_ARRAY_TO_BITS((x"C9", x"C8", x"C7", x"C6", x"C5", x"C4", x"C3", x"C2")),
             14 to TILE_WIDTH_TEST => TRASH_DATA
         )
     --synthesis translate_on

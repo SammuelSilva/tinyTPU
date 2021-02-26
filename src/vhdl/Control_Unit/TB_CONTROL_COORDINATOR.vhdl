@@ -38,17 +38,22 @@ architecture BEH of TB_CONTROL_COORDINATOR is
             
             BUSY                        : out std_logic;
             
-            WEIGHT_BUSY                 :  in std_logic; 
+            WEIGHT_BUSY                 :  in std_logic;
+            WEIGHT_RESOURCE_BUSY        :  in std_logic;
             WEIGHT_INSTRUCTION          : out WEIGHT_INSTRUCTION_TYPE;
             WEIGHT_INSTRUCTION_EN       : out std_logic;
             
             MATRIX_BUSY                 :  in std_logic;
+            MATRIX_RESOURCE_BUSY        :  in std_logic;
             MATRIX_INSTRUCTION          : out INSTRUCTION_TYPE;
             MATRIX_INSTRUCTION_EN       : out std_logic;
             
             ACTIVATION_BUSY             :  in std_logic;
+            ACTIVATION_RESOURCE_BUSY    :  in std_logic;
             ACTIVATION_INSTRUCTION      : out INSTRUCTION_TYPE;
-            ACTIVATION_INSTRUCTION_EN   : out std_logic
+            ACTIVATION_INSTRUCTION_EN   : out std_logic;
+
+            SYNCHRONIZE                 : out std_logic
         );
     end component DUT;
     for all : DUT use entity WORK.CONTROL_COORDINATOR(BEH);
@@ -73,6 +78,12 @@ architecture BEH of TB_CONTROL_COORDINATOR is
     signal ACTIVATION_INSTRUCTION       : INSTRUCTION_TYPE;
     signal ACTIVATION_INSTRUCTION_EN    : std_logic;
     
+    signal WEIGHT_RESOURCE_BUSY        :   std_logic;
+    signal MATRIX_RESOURCE_BUSY        :   std_logic;
+    signal ACTIVATION_RESOURCE_BUSY    :   std_logic;
+    
+    signal SYNCHRONIZE                 :  std_logic;
+
     -- for clock gen
     constant clock_period   : time := 10 ns;
     signal stop_the_clock   : boolean;
@@ -86,14 +97,18 @@ begin
         INSTRUCTION_EN              => INSTRUCTION_EN,
         BUSY                        => BUSY,
         WEIGHT_BUSY                 => WEIGHT_BUSY,
+        WEIGHT_RESOURCE_BUSY        => WEIGHT_RESOURCE_BUSY,        
         WEIGHT_INSTRUCTION          => WEIGHT_INSTRUCTION,
         WEIGHT_INSTRUCTION_EN       => WEIGHT_INSTRUCTION_EN,
         MATRIX_BUSY                 => MATRIX_BUSY,
+        MATRIX_RESOURCE_BUSY        => MATRIX_RESOURCE_BUSY,
         MATRIX_INSTRUCTION          => MATRIX_INSTRUCTION,
         MATRIX_INSTRUCTION_EN       => MATRIX_INSTRUCTION_EN,
         ACTIVATION_BUSY             => ACTIVATION_BUSY,
+        ACTIVATION_RESOURCE_BUSY    => ACTIVATION_RESOURCE_BUSY,
         ACTIVATION_INSTRUCTION      => ACTIVATION_INSTRUCTION,
-        ACTIVATION_INSTRUCTION_EN   => ACTIVATION_INSTRUCTION_EN
+        ACTIVATION_INSTRUCTION_EN   => ACTIVATION_INSTRUCTION_EN,
+        SYNCHRONIZE                 => SYNCHRONIZE
     );
     
     STIMULUS:
@@ -122,6 +137,7 @@ begin
         wait until '1'=CLK and CLK'event;
         INSTRUCTION_EN  <= '0';
         wait until '1'=CLK and CLK'event;
+        
         -- Test multiple weight
         WEIGHT_BUSY     <= '1';
         wait until '1'=CLK and CLK'event;

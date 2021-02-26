@@ -33,7 +33,7 @@ library IEEE;
 entity DSP_LOAD_COUNTER is
     generic(
         COUNTER_WIDTH   : natural := 32;
-        MATRIX_WIDTH    : natural := 14
+        MATRIX_WIDTH    : natural := 8
     );
     port(
         CLK, RESET  : in  std_logic;
@@ -68,7 +68,7 @@ begin
 
     LOAD_ns <= LOAD; 
 
-    INPUT_PIPE_ns <= START_VAL when LOAD = '1' else ((COUNTER_WIDTH-1 downto 1 => '0')&'1'); -- Inserção do valor inicial ou do valor 1 em binario
+    INPUT_PIPE_ns <= START_VAL when LOAD = '1' else ((COUNTER_WIDTH-1 downto 2 => '0')&'1'&'0'); -- Inserção do valor inicial ou do valor 1 em binario
     COUNTER_INPUT_ns <= INPUT_PIPE_cs; -- COUNTER_INPUT_ns <- INPUT_PIPE_cs <- INPUT_PIPE_ns;
     
     COUNTER_ns <= std_logic_vector(unsigned(COUNTER_cs) + unsigned(COUNTER_INPUT_cs)); -- Contador somando de "um em um"

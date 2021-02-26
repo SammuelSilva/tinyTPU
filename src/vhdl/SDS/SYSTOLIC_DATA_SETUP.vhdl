@@ -30,7 +30,8 @@ library IEEE;
     
 entity SYSTOLIC_DATA_SETUP is
     generic(
-        MATRIX_WIDTH  : natural := 14
+        MATRIX_WIDTH  : natural := 8;
+        MATRIX_HALF   : natural := (8-1)/NUMBER_OF_MULT
     );
     port(
         CLK, RESET      : in  std_logic;
@@ -43,8 +44,8 @@ end entity SYSTOLIC_DATA_SETUP;
 --! @brief Architecture of the systolic data setup component.
 architecture BEH of SYSTOLIC_DATA_SETUP is
     -- Fila da matriz de Byte Array
-    signal BUFFER_REG_cs : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1, 0 to NUMBER_OF_MULT-1) := (others => (others => (others => (others => '0'))));
-    signal BUFFER_REG_ns : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1, 0 to NUMBER_OF_MULT-1);
+    signal BUFFER_REG_cs : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to MATRIX_HALF+1, 0 to NUMBER_OF_MULT-1) := (others => (others => (others => (others => '0'))));
+    signal BUFFER_REG_ns : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to MATRIX_HALF+1, 0 to NUMBER_OF_MULT-1);
 begin
     
     INPUT_GEN:
@@ -56,8 +57,8 @@ begin
     SHIFT_REG:
     process(DATA_INPUT, BUFFER_REG_cs) is
         variable DATA_INPUT_v       : BYTE_ARRAY_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1);
-        variable BUFFER_REG_cs_v    : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1, 0 to NUMBER_OF_MULT-1);
-        variable BUFFER_REG_ns_v    : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1, 0 to NUMBER_OF_MULT-1);
+        variable BUFFER_REG_cs_v    : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to MATRIX_HALF+1, 0 to NUMBER_OF_MULT-1);
+        variable BUFFER_REG_ns_v    : BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to MATRIX_HALF+1, 0 to NUMBER_OF_MULT-1);
         variable FLAG_v             : std_logic;
     begin
         -- Atribui os dados para as variaveis, o DATA_INPUT_V recebe os dados de DATA_INPUT exceto os contidos na posição 0.
@@ -77,7 +78,7 @@ begin
         end loop;
         
         for i in NUMBER_OF_MULT+1 to MATRIX_WIDTH-1 loop
-            for j in NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1 loop
+            for j in NUMBER_OF_MULT to MATRIX_HALF+1 loop
                 for k in 0 to NUMBER_OF_MULT-1 loop
                     BUFFER_REG_ns_v(i, j, k) := BUFFER_REG_cs_v(i-1, j, k); -- Copia da posição 2 para frente os dados contidos no registrador atual para o proximo
                 end loop;
@@ -90,7 +91,7 @@ begin
     
     SYSTOLIC_PROCESS:
     process(BUFFER_REG_cs) is
-        variable BUFFER_REG_cs_v    :BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to (MATRIX_WIDTH/NUMBER_OF_MULT)+1, 0 to NUMBER_OF_MULT-1);
+        variable BUFFER_REG_cs_v    :BYTE_ARRAY_3D_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1, NUMBER_OF_MULT to MATRIX_HALF+1, 0 to NUMBER_OF_MULT-1);
         variable SYSTOLIC_OUTPUT_v  : BYTE_ARRAY_TYPE(NUMBER_OF_MULT to MATRIX_WIDTH-1);
         variable FLAG_v             : std_logic;
     begin

@@ -31,34 +31,34 @@ library IEEE;
     
 entity TPU is
     generic(
-        MATRIX_WIDTH            : natural := 14; --!< A Largura da MMU e dos barramentos
-        WEIGHT_BUFFER_DEPTH     : natural := 32768; --!< A "profundidade" do Weight Buffer
+        MATRIX_WIDTH            : natural := 8; --!< A Largura da MMU e dos barramentos
+        WEIGHT_BUFFER_DEPTH     : natural := 69632; --!< A "profundidade" do Weight Buffer
         UNIFIED_BUFFER_DEPTH    : natural := 4096 --!< A "Profundidade" do Unified Buffer
     );  
     port(   
         CLK, RESET              : in  std_logic;
         ENABLE                  : in  std_logic;
-        -- Para o calculo do verificador do tempo de execução 
-        RUNTIME_COUNT           : out WORD_TYPE; --!< Conta o tempo de execução desde a primeira instrução ativada até o sinal de sincronização.
+        -- Para o calculo do verificador do tempo de execu��o 
+        RUNTIME_COUNT           : out WORD_TYPE; --!< Conta o tempo de execu��o desde a primeira instru��o ativada at� o sinal de sincroniza��o.
         
-        -- Entrada de instruções para a FIFO
-        LOWER_INSTRUCTION_WORD  : in  WORD_TYPE; --!< A palavra mais baixa da instrução.
-        MIDDLE_INSTRUCTION_WORD : in  WORD_TYPE; --!< A palavra do meio da instrução.
-        UPPER_INSTRUCTION_WORD  : in  HALFWORD_TYPE; --!< A meia-palavra (16 Bit) superior da instrução.
+        -- Entrada de instru��es para a FIFO
+        LOWER_INSTRUCTION_WORD  : in  WORD_TYPE; --!< A palavra mais baixa da instru��o.
+        MIDDLE_INSTRUCTION_WORD : in  WORD_TYPE; --!< A palavra do meio da instru��o.
+        UPPER_INSTRUCTION_WORD  : in  HALFWORD_TYPE; --!< A meia-palavra (16 Bit) superior da instru��o.
         INSTRUCTION_WRITE_EN    : in  std_logic_vector(0 to 2); --!< Ativadores de escrita para cada palavra.
         
-        -- Flags de interrupções de Instruções
+        -- Flags de interrup��es de Instru��es
         INSTRUCTION_EMPTY       : out std_logic; --!< Determina se a FIFO esta vazia . Usada para interromper o Sistema Host.
         INSTRUCTION_FULL        : out std_logic; --!< Determina se a FIFO esta cheia . Usada para interromper o Sistema Host.
     
         WEIGHT_WRITE_PORT       : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< Porta de escrita do Host para weight buffer
-        WEIGHT_ADDRESS          : in  WEIGHT_ADDRESS_TYPE; --!< Endereço do Host para o weight buffer.
+        WEIGHT_ADDRESS          : in  WEIGHT_ADDRESS_TYPE; --!< Endere�o do Host para o weight buffer.
         WEIGHT_ENABLE           : in  std_logic; --!< Ativador do Host para o weight buffer.
         WEIGHT_WRITE_ENABLE     : in  std_logic_vector(0 to MATRIX_WIDTH-1); --!< Ativador do Host para escrita especifica no weight buffer.
             
         BUFFER_WRITE_PORT       : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< Porta de escrita do Host para unified buffer.
         BUFFER_READ_PORT        : out BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< Host read port for the unified buffer.
-        BUFFER_ADDRESS          : in  BUFFER_ADDRESS_TYPE; --!< Endereço do Host para o unified buffer.
+        BUFFER_ADDRESS          : in  BUFFER_ADDRESS_TYPE; --!< Endere�o do Host para o unified buffer.
         BUFFER_ENABLE           : in  std_logic; --!< Ativador do Host para o unified buffer.
         BUFFER_WRITE_ENABLE     : in  std_logic_vector(0 to MATRIX_WIDTH-1); --!< Ativador do Host para escrita especifica no unified buffer.
         -- Memory synchronization flag for interrupt 
@@ -68,7 +68,7 @@ end entity TPU;
 
 --! @brief The architecture of the TPU.
 architecture BEH of TPU is
-    -- Contador de tempo de execução das Instruções realizadas
+    -- Contador de tempo de execu��o das Instru��es realizadas
     component RUNTIME_COUNTER is
         port(
             CLK, RESET      :  in std_logic;
@@ -80,7 +80,7 @@ architecture BEH of TPU is
     end component RUNTIME_COUNTER;
     for all : RUNTIME_COUNTER use entity WORK.RUNTIME_COUNTER(BEH);
 
-    -- Instruções que serão enviadas a FIFO quebradas em 3 partes (U,M,L)
+    -- Instru��es que ser�o enviadas a FIFO quebradas em 3 partes (U,M,L)
     component INSTRUCTION_FIFO is
         generic(
             FIFO_DEPTH  : natural := 32
@@ -108,8 +108,8 @@ architecture BEH of TPU is
     -- ?????
     component TPU_CORE is
         generic(
-            MATRIX_WIDTH            : natural := 14;
-            WEIGHT_BUFFER_DEPTH     : natural := 32768;
+            MATRIX_WIDTH            : natural := 8;
+            WEIGHT_BUFFER_DEPTH     : natural := 69632;
             UNIFIED_BUFFER_DEPTH    : natural := 4096
         );
         port(
@@ -141,7 +141,7 @@ architecture BEH of TPU is
     signal SYNCHRONIZE_IN       : std_logic;
 
 begin
-    -- Atribuiçao das portas com seus respectivos inputs e outputs
+    -- Atribui�ao das portas com seus respectivos inputs e outputs
     RUNTIME_COUNTER_i : RUNTIME_COUNTER
     port map(
         CLK             => CLK,
@@ -155,9 +155,9 @@ begin
     port map(
         CLK         => CLK,
         RESET       => RESET,
-        LOWER_WORD  => LOWER_INSTRUCTION_WORD, -- A palavra mais baixa da instrução (32 bits).
-        MIDDLE_WORD => MIDDLE_INSTRUCTION_WORD, -- A palavra do meio da instrução (32 bits).
-        UPPER_WORD  => UPPER_INSTRUCTION_WORD, -- A palavra mais alta da instrução (16 bits).
+        LOWER_WORD  => LOWER_INSTRUCTION_WORD, -- A palavra mais baixa da instru��o (32 bits).
+        MIDDLE_WORD => MIDDLE_INSTRUCTION_WORD, -- A palavra do meio da instru��o (32 bits).
+        UPPER_WORD  => UPPER_INSTRUCTION_WORD, -- A palavra mais alta da instru��o (16 bits).
         WRITE_EN    => INSTRUCTION_WRITE_EN,  -- Ativadores de escrita para cada palavra.
         OUTPUT      => INSTRUCTION,
         NEXT_EN     => INSTRUCTION_ENABLE, -- Entrada resultante do processo INSTRUCTION_FEED
@@ -186,7 +186,7 @@ begin
         WEIGHT_WRITE_ENABLE => WEIGHT_WRITE_ENABLE,
         
         BUFFER_WRITE_PORT   => BUFFER_WRITE_PORT,
-        BUFFER_READ_PORT    => BUFFER_READ_PORT, -- Porta de saida da TPU é a porta de saida da TPU_CORE que é a porta de saida do MASTER_READ_PORT do UNIFIED_BUFFER
+        BUFFER_READ_PORT    => BUFFER_READ_PORT, -- Porta de saida da TPU � a porta de saida da TPU_CORE que � a porta de saida do MASTER_READ_PORT do UNIFIED_BUFFER
         BUFFER_ADDRESS      => BUFFER_ADDRESS,
         BUFFER_ENABLE       => BUFFER_ENABLE,
         BUFFER_WRITE_ENABLE => BUFFER_WRITE_ENABLE,
@@ -195,12 +195,12 @@ begin
         INSTRUCTION_ENABLE  => INSTRUCTION_ENABLE, -- Entrada resultante do processo INSTRUCTION_FEED
         
         BUSY                => BUSY, -- OUTPUT: Se o Control Cordinator esta ocupado
-        SYNCHRONIZE         => SYNCHRONIZE_IN -- OUTPUT: Se as instruções estão sincronizadas
+        SYNCHRONIZE         => SYNCHRONIZE_IN -- OUTPUT: Se as instru��es est�o sincronizadas
     );
     
     SYNCHRONIZE <= SYNCHRONIZE_IN;
     
-    -- Verifica se a FIFO esta vazia e não há instruções sendo executadas para inserir uma nova instrução na TPU
+    -- Verifica se a FIFO esta vazia e n�o h� instru��es sendo executadas para inserir uma nova instru��o na TPU
     INSTRUCTION_FEED:
     process(EMPTY, BUSY) is
     begin

@@ -96,17 +96,20 @@ begin
         WRITE_EN <= (others => '0');
         NEXT_EN <= '0';
         -- RESET
+        report "RESET" severity NOTE;
         RESET <= '1';
         wait until '1'=CLK and CLK'event;
         RESET <= '0';
         wait until '1'=CLK and CLK'event;
         -- Put in lower word
+        report "Put in lower word" severity NOTE;
         LOWER_WORD <= x"AFFEDEAD";
         WRITE_EN(0) <= '1';
         wait until '1'=CLK and CLK'event;
         LOWER_WORD <= (others => '0');
         WRITE_EN(0) <= '0';
         -- FIFO should still be empty
+        report "FIFO should be empty!" severity NOTE;
         wait for 1 ns;
         if EMPTY /= '1' then
             report "FIFO should be empty!" severity ERROR;
@@ -115,12 +118,14 @@ begin
         end if;
         wait until '1'=CLK and CLK'event;
         -- Put in middle word
+        report "Put in middle word" severity NOTE;
         MIDDLE_WORD <= x"B00BEEEE";
         WRITE_EN(1) <= '1';
         wait until '1'=CLK and CLK'event;
         MIDDLE_WORD <= (others => '0');
         WRITE_EN(1) <= '0';
         -- FIFO should still be empty
+        report "FIFO should still be empty!" severity NOTE;
         wait for 1 ns;
         if EMPTY /= '1' then
             report "FIFO should be empty!" severity ERROR;
@@ -129,12 +134,14 @@ begin
         end if;
         wait until '1'=CLK and CLK'event;
         -- Put in uppper word
+        report "Put in uppper word" severity NOTE;
         UPPER_WORD <= x"BEEB";
         WRITE_EN(2) <= '1';
         wait until '1'=CLK and CLK'event;
         UPPER_WORD <= (others => '0');
         WRITE_EN(2) <= '0';
         -- FIFO shouldn't be empty anymore
+        report "FIFO shouldn't be empty anymore" severity NOTE;
         wait for 1 ns;
         if EMPTY /= '0' then
             report "FIFO shouldn't be empty!" severity ERROR;
@@ -143,6 +150,7 @@ begin
         end if;
         wait until '1'=CLK and CLK'event;
         -- Poll the written value
+        report "Poll the written value" severity NOTE;
         NEXT_EN <= '1';
         wait for 1 ns;
         if OUTPUT /= BITS_TO_INSTRUCTION(x"BEEBB00BEEEEAFFEDEAD") then
@@ -150,7 +158,7 @@ begin
         end if;
         
         report "Test was successful!" severity NOTE;
-        --stop_the_clock <= true;
+        stop_the_clock <= true;
         wait;
     end process STIMULUS;
     

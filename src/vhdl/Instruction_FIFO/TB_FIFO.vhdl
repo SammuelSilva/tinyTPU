@@ -87,11 +87,13 @@ begin
         WRITE_EN <= '0';
         NEXT_EN <= '0';
         -- RESET
+        report "RESET" severity WARNING;
         RESET <= '1';
         wait until '1'=CLK and CLK'event;
         RESET <= '0';
         wait until '1'=CLK and CLK'event;
         -- Fill FIFO
+        report "Fill FIFO" severity WARNING;
         for i in 0 to FIFO_DEPTH-1 loop
             INPUT <= std_logic_vector(to_unsigned(i, FIFO_WIDTH));
             WRITE_EN <= '1';
@@ -99,6 +101,7 @@ begin
         end loop;
         WRITE_EN <= '0';
         -- FIFO should be full
+        report "FIFO should be full" severity NOTE;
         wait for 1 ns;
         if FULL /= '1' then
             report "Test failed! FIFO should be full!" severity ERROR;
@@ -106,6 +109,7 @@ begin
             wait;
         end if;
         -- Check FIFO
+        report "Check FIFO" severity NOTE;
         for i in 0 to FIFO_DEPTH-1 loop
             NEXT_EN <= '1';
             wait for 1 ns;
@@ -118,6 +122,7 @@ begin
         end loop;
         NEXT_EN <= '0';
         -- FIFO should be empty
+        report "FIFO should be empty" severity NOTE;
         wait for 1 ns;
         if EMPTY /= '1' then
             report "Test failed! FIFO should be empty!" severity ERROR;
@@ -128,6 +133,7 @@ begin
         
         wait until '1'=CLK and CLK'event;
         -- Fill FIFO
+        report "Fill FIFO" severity NOTE;
         for i in 0 to FIFO_DEPTH-1 loop
             INPUT <= std_logic_vector(to_unsigned(i, FIFO_WIDTH));
             WRITE_EN <= '1';
@@ -135,6 +141,7 @@ begin
         end loop;
         WRITE_EN <= '0';
         -- FIFO should be full
+        report "FIFO should be full" severity NOTE;
         wait for 1 ns;
         if FULL /= '1' then
             report "Test failed! FIFO should be full!" severity ERROR;
@@ -142,6 +149,7 @@ begin
             wait;
         end if;
         -- Check half FIFO
+        report "Check Half FIFO" severity NOTE;
         for i in 0 to FIFO_DEPTH/2-1 loop
             NEXT_EN <= '1';
             wait for 1 ns;
@@ -154,6 +162,7 @@ begin
         end loop;
         NEXT_EN <= '0';
         -- Fill FIFO for overflow check
+        report "Fill FIFO for overflow check" severity NOTE;
         for i in 0 to FIFO_DEPTH/2-1 loop
             INPUT <= std_logic_vector(to_unsigned(i, FIFO_WIDTH));
             WRITE_EN <= '1';
@@ -161,6 +170,7 @@ begin
         end loop;
         WRITE_EN <= '0';
         -- FIFO should be full
+        report "FIFO should be full" severity NOTE;
         wait for 1 ns;
         if FULL /= '1' then
             report "Test failed! FIFO should be full!" severity ERROR;
@@ -168,6 +178,7 @@ begin
             wait;
         end if;
         -- Check half FIFO
+        report "Check half FIFO" severity NOTE;
         for i in FIFO_DEPTH/2 to FIFO_DEPTH-1 loop
             NEXT_EN <= '1';
             wait for 1 ns;
@@ -180,6 +191,7 @@ begin
         end loop;
         NEXT_EN <= '0';
         -- Check half FIFO
+        report "Check half FIFO" severity NOTE;
         for i in 0 to FIFO_DEPTH/2-1 loop
             NEXT_EN <= '1';
             wait for 1 ns;

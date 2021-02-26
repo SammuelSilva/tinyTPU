@@ -54,8 +54,6 @@ entity MACC is
         INPUT_FIRST           : in EXTENDED_BYTE_TYPE; --!< Entrada para a operação de multiplicação-soma.
         INPUT_LAST            : in EXTENDED_BYTE_TYPE;
         LAST_SUM              : in std_logic_vector(LAST_SUM_WIDTH-1 downto 0); --!< Entrada para a acumulação dos valores.
-        ZERO_FIRST            : in std_logic;
-        ZERO_LAST             : in std_logic;
         -- Output
         PARTIAL_SUM           : out std_logic_vector(PARTIAL_SUM_WIDTH-1 downto 0) --!< Saida do registro do valor parcial da soma.
     );
@@ -85,13 +83,6 @@ architecture BEH of MACC is
         -- Registros (Vetores) que contem os valores da soma atual (cs) e proximo(ns)
     signal PARTIAL_SUM_cs       : std_logic_vector(PARTIAL_SUM_WIDTH-1 downto 0) := (others => '0');
     signal PARTIAL_SUM_ns       : std_logic_vector(PARTIAL_SUM_WIDTH-1 downto 0);
-    
-    signal ACTIVATE_ZERO        : std_logic := '0';
-
-    signal ZERO_PIPELINE_ns     : std_logic_vector(0 to NUMBER_OF_MULT-1) := (others => '0');
-    signal ZERO_PIPELINE_cs     : std_logic_vector(0 to NUMBER_OF_MULT-1);
-    signal ZERO_FINAL           : std_logic := '0';
-    signal ZERO_FINAL_cs        : std_logic;
 
     attribute use_dsp : string;
     attribute use_dsp of PARTIAL_SUM_ns : signal is "yes";
@@ -105,63 +96,41 @@ begin
 
     PREWEIGHT_ns(0)    <= WEIGHT_INPUT_FIRST;
     PREWEIGHT_ns(1)    <= WEIGHT_INPUT_LAST;
-    
-    ZERO_PIPELINE_ns(0)    <= ZERO_FIRST;
-    ZERO_PIPELINE_ns(1)    <= ZERO_LAST;
 
     WEIGHT_ns(0 to NUMBER_OF_MULT-1)       <= PREWEIGHT_cs(0 to NUMBER_OF_MULT-1);
 
     MUL:
-    process(INPUT_cs, WEIGHT_cs, ZERO_PIPELINE_cs, ZERO_FINAL) is
+    process(INPUT_cs, WEIGHT_cs) is
         variable INPUT_v            : EXTENDED_BYTE_TYPE;
         variable WEIGHT_v           : EXTENDED_BYTE_TYPE;
         variable PIPELINE_ns_v      : MUL_HALFWORD_ARRAY_TYPE(0 to NUMBER_OF_MULT-1);
-        variable ZERO_PIPELINE_cs_v : std_logic_vector(0 to NUMBER_OF_MULT-1);
         variable FLAG_v             : std_logic;
     begin
-        ZERO_PIPELINE_cs_v(0 to NUMBER_OF_MULT-1) := ZERO_PIPELINE_cs(0 to NUMBER_OF_MULT-1);
         PIPELINE_ns_v := (others => (others => '0'));
         FLAG_v := '0';
 
         for i in 0 to NUMBER_OF_MULT-1 loop
-            if ZERO_PIPELINE_cs_v(i) /= '1' then
-
                 -- (INPUT > INPUT_ns > INPUT_cs > INPUT_v)
-                INPUT_v         := INPUT_cs(i); -- Recebe o valor carregado do input 
+            INPUT_v         := INPUT_cs(i); -- Recebe o valor carregado do input 
                 -- (WEIGHT_INPUT > PREWEIGHT_ns [IF PRELOAD_WEIGHT = 1] > PREWEIGHT_cs > WEIGHT_ns [IF LOAD_WEIGHT = 1] > WEIGHT_cs > WEIGHT_v) - Permite a realizaÃ§Ã£o de calculos com o mesmo peso varias vezes.
-                WEIGHT_v        := WEIGHT_cs(i); -- Recebe o valor carregado do peso
-
+            WEIGHT_v        := WEIGHT_cs(i); -- Recebe o valor carregado do peso
                 -- Converte para signed para realizar as operaÃ§Ãµes, depois converte novamente para vector logic.
-                PIPELINE_ns_v(i) := std_logic_vector(signed(INPUT_v) * signed(WEIGHT_v));
-                
-                FLAG_v := '1';    
-            end if;
+            PIPELINE_ns_v(i) := std_logic_vector(signed(INPUT_v) * signed(WEIGHT_v));
         end loop;
 
-        if FLAG_v = '1' then
-            PIPELINE_ns(0 to NUMBER_OF_MULT-1)     <= PIPELINE_ns_v(0 to NUMBER_OF_MULT-1); -- Recebe o valor da multiplicaÃ§ao
-        end if;
-        ZERO_FINAL      <= FLAG_v;
+        PIPELINE_ns(0 to NUMBER_OF_MULT-1)     <= PIPELINE_ns_v(0 to NUMBER_OF_MULT-1); -- Recebe o valor da multiplicaÃ§ao
     end process MUL;
     
         -- O Processo de multiplicaÃ§Ã£o e soma
     ADD:
-    process(PIPELINE_cs, LAST_SUM, ZERO_FINAL_cs) is
+    process(PIPELINE_cs, LAST_SUM) is
         variable PIPELINE_cs_v      : MUL_HALFWORD_ARRAY_TYPE(0 to NUMBER_OF_MULT-1);
         variable LAST_SUM_v         : std_logic_vector(LAST_SUM_WIDTH-1 downto 0);
         variable PARTIAL_SUM_v      : std_logic_vector(PARTIAL_SUM_WIDTH-1 downto 0);
-        variable ZERO_FINAL_cs_v : std_logic;
     begin
 
-        ZERO_FINAL_cs_v := ZERO_FINAL_cs;
-
-        if ZERO_FINAL_cs_v /= '0' then
-            -- (NO INPUT > PIPELINE_ns_v > PIPELINE_ns > PIPELINE_cs > PIPELINE_cs_v)
-            PIPELINE_cs_v(0 to NUMBER_OF_MULT-1)   := PIPELINE_cs(0 to NUMBER_OF_MULT-1);
-        else
-            PIPELINE_cs_v   := (others => (others => '0'));
-        end if;
-
+        -- (NO INPUT > PIPELINE_ns_v > PIPELINE_ns > PIPELINE_cs > PIPELINE_cs_v)
+        PIPELINE_cs_v(0 to NUMBER_OF_MULT-1)   := PIPELINE_cs(0 to NUMBER_OF_MULT-1);
         LAST_SUM_v      := LAST_SUM;
 
         -- Somente um caso irÃ¡ acontecer, e a soma que ocorre Ã© a da multiplicaÃ§Ã£o anterior a que ocorreu nesse processo atual
@@ -198,16 +167,10 @@ begin
                 
                 if LOAD_WEIGHT = '1' then
                     WEIGHT_cs(0 to NUMBER_OF_MULT-1)       <= WEIGHT_ns(0 to NUMBER_OF_MULT-1); -- Carregamento do novo peso (P_new)
-                    ACTIVATE_ZERO   <= LOAD_WEIGHT;
-                end if;
-                
-                if ACTIVATE_ZERO = '1' then
-                    ZERO_PIPELINE_cs(0 to NUMBER_OF_MULT-1) <= ZERO_PIPELINE_ns(0 to NUMBER_OF_MULT-1);
                 end if;
                 
                 if ENABLE = '1' then
                     INPUT_cs(0 to NUMBER_OF_MULT-1)     <= INPUT_ns(0 to NUMBER_OF_MULT-1); -- Responsavel por armazenar o input
-                    ZERO_FINAL_cs                       <= ZERO_FINAL;
                     PIPELINE_cs(0 to NUMBER_OF_MULT-1)  <= PIPELINE_ns(0 to NUMBER_OF_MULT-1); -- Responsavel por armazenar o valor intacto da multiplicação
                     PARTIAL_SUM_cs                      <= PARTIAL_SUM_ns; --Responsavel por armazenar o valor da soma
                 end if;

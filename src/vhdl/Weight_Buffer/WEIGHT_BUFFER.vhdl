@@ -35,9 +35,9 @@ library IEEE;
     
 entity WEIGHT_BUFFER is
     generic(
-        MATRIX_WIDTH    : natural := 14;
+        MATRIX_WIDTH    : natural := 8;
         -- How many tiles can be saved
-        TILE_WIDTH      : natural := 32768  --!< The depth of the buffer.
+        TILE_WIDTH      : natural := 69632  --!< The depth of the buffer.
     );
     port(
         CLK, RESET      : in  std_logic;
@@ -60,7 +60,7 @@ end entity WEIGHT_BUFFER;
 
 --! @brief The architecture of the weight buffer component.
 architecture BEH of WEIGHT_BUFFER is
-   -- Matriz de sinais logicos de tamanho 14 x 8: INICIO
+   -- Matriz de sinais logicos de tamanho 8 x 8: INICIO
     signal READ_PORT0_REG0_cs   : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1) := (others => (others => '0'));
     signal READ_PORT0_REG0_ns   : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
     signal READ_PORT0_REG1_cs   : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1) := (others => (others => '0'));
@@ -82,8 +82,11 @@ architecture BEH of WEIGHT_BUFFER is
     signal READ_PORT1_BITS  : std_logic_vector(MATRIX_WIDTH*BYTE_WIDTH-1 downto 0);
    -- FIM
 
+   --synthesis translate_off
     constant TILE_WIDTH_TEST : natural := 32767;
     constant TRASH_DATA : std_logic_vector(MATRIX_WIDTH*BYTE_WIDTH-1 downto 0) := (others => '0');
+   --synthesis translate_on
+
    -- Memoria onde o dado será armazenado, sendo um array de Tile_WIDTH x ((MATRIX_WIDTH*BYTE_WIDTH-1) => 32768 x 112 bits
     type RAM_TYPE is array(0 to TILE_WIDTH-1) of std_logic_vector(MATRIX_WIDTH*BYTE_WIDTH-1 downto 0);
     shared variable RAM  : RAM_TYPE
@@ -91,20 +94,20 @@ architecture BEH of WEIGHT_BUFFER is
         :=
         -- Test values - Identity
         (
-            0  => BYTE_ARRAY_TO_BITS((x"80", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
-            1  => BYTE_ARRAY_TO_BITS((x"00", x"80", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
-            2  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"80", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
-            3  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"80", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
-            4  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"80", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
-            5  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"80", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
-            6  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"80", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
-            7  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"80", x"00", x"00", x"00", x"00", x"00", x"00")),
-            8  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"80", x"00", x"00", x"00", x"00", x"00")),
-            9  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"80", x"00", x"00", x"00", x"00")),
-            10 => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"80", x"00", x"00", x"00")),
-            11 => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"80", x"00", x"00")),
-            12 => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"80", x"00")),
-            13 => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"80")),
+            0  => BYTE_ARRAY_TO_BITS((x"80", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
+            1  => BYTE_ARRAY_TO_BITS((x"00", x"80", x"00", x"00", x"00", x"00", x"00", x"00")),
+            2  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"80", x"00", x"00", x"00", x"00", x"00")),
+            3  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"80", x"00", x"00", x"00", x"00")),
+            4  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"80", x"00", x"00", x"00")),
+            5  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"80", x"00", x"00")),
+            6  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"80", x"00")),
+            7  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"80")),
+            8  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
+            9  => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
+            10 => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
+            11 => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
+            12 => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
+            13 => BYTE_ARRAY_TO_BITS((x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00")),
             14 to TILE_WIDTH_TEST => TRASH_DATA
         )
     --synthesis translate_on
@@ -128,7 +131,7 @@ begin
 
     -- A Inserção de dados ocorre se, e somente se: O Endereço for valido e Tanto o Enable da port0 (EN0) e o Enable de Escrita (WRITE_EN0) estiverem ativados.
     -- A Leitura de dados ocorre se, e somente se: O Endereço for valido e o Enable da port0 (EN0) estiver ativado.
-    PORT0:
+    READ_PORT:
     process(CLK) is
     begin
         if CLK'event and CLK = '1' then
@@ -136,20 +139,22 @@ begin
                 --synthesis translate_off
                 if to_integer(unsigned(ADDRESS0)) < TILE_WIDTH then --Se o endereço for menor que o tamanho do buffer
                 --synthesis translate_on
-                    if WRITE_EN0 = '1' then -- Se o ENABLE de escrita da port0 estiver ativado
-                        RAM(to_integer(unsigned(ADDRESS0))) := WRITE_PORT0_BITS; -- É escrito na memoria na posição ADDRESS os bits do dado.
-                    end if;
                     READ_PORT0_BITS <= RAM(to_integer(unsigned(ADDRESS0))); -- É Atribuido a READ_PORT0 os bits que estavam na memoria na posição ADDRESS0
+                    if to_integer(unsigned(ADDRESS0)) + 1 <= MATRIX_WIDTH-1 then
+                        READ_PORT1_BITS <= RAM(to_integer(unsigned(ADDRESS0)) + 1); -- É Atribuido a READ_PORT1 os bits que estavam na memoria na posição ADDRESS0+1
+                    else
+                        READ_PORT1_BITS <= (others => '0');
+                    end if;
                 --synthesis translate_off
                 end if;
                 --synthesis translate_on
             end if;
         end if;
-    end process PORT0;
+    end process READ_PORT;
     
     -- A Inserção de dados ocorre se, e somente se:
     -- A Leitura de dados ocorre se, e somente se: O Endereço for valido e o Enable da port0 (EN0) estiver ativado.
-    PORT1:
+    WRITE_PORT:
     process(CLK) is
     begin
         if CLK'event and CLK = '1' then
@@ -162,13 +167,12 @@ begin
                             RAM(to_integer(unsigned(ADDRESS1)))((i + 1) * BYTE_WIDTH - 1 downto i * BYTE_WIDTH) := WRITE_PORT1_BITS((i + 1) * BYTE_WIDTH - 1 downto i * BYTE_WIDTH);
                         end if;
                     end loop;
-                    READ_PORT1_BITS <= RAM(to_integer(unsigned(ADDRESS1))); -- É Atribuido a READ_PORT1 os bits que estavam na memoria na posição ADDRESS1
                 --synthesis translate_off
                 end if;
                 --synthesis translate_on
             end if;
         end if;
-    end process PORT1;
+    end process WRITE_PORT;
     
     SEQ_LOG:
     process(CLK) is

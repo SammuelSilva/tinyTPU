@@ -35,7 +35,7 @@ library IEEE;
     
 entity MATRIX_MULTIPLY_CONTROL is
     generic(
-        MATRIX_WIDTH    : natural := 14
+        MATRIX_WIDTH    : natural := 8
     );
     port(
         CLK, RESET      :  in std_logic;
@@ -91,7 +91,7 @@ architecture BEH of MATRIX_MULTIPLY_CONTROL is
     component LOAD_COUNTER is
         generic(
             COUNTER_WIDTH   : natural := 32;
-            MATRIX_WIDTH    : natural := 14
+            MATRIX_WIDTH    : natural := 8
         );
         port(
             CLK, RESET  : in  std_logic;

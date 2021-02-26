@@ -107,21 +107,21 @@ begin
         wait until '1'=CLK and CLK'event;
         ENABLE <= '1';
         INSTRUCTION_PORT.OP_CODE <= "00001001"; -- load weight
-        INSTRUCTION_PORT.CALC_LENGTH <= std_logic_vector(to_unsigned(14, LENGTH_WIDTH));
+        INSTRUCTION_PORT.CALC_LENGTH <= std_logic_vector(to_unsigned(8, LENGTH_WIDTH));
         INSTRUCTION_PORT.BUFFER_ADDRESS <= x"000000";
         INSTRUCTION_PORT.ACC_ADDRESS <= x"0000";
         
         INSTRUCTION_ENABLE <= '1';
         wait until '1'=CLK and CLK'event;
         INSTRUCTION_PORT.OP_CODE <= "00100001"; -- matrix multiply
-        INSTRUCTION_PORT.CALC_LENGTH <= std_logic_vector(to_unsigned(14, LENGTH_WIDTH));
+        INSTRUCTION_PORT.CALC_LENGTH <= std_logic_vector(to_unsigned(8, LENGTH_WIDTH));
         INSTRUCTION_PORT.BUFFER_ADDRESS <= x"000000";
         INSTRUCTION_PORT.ACC_ADDRESS <= x"0000";
         
         INSTRUCTION_ENABLE <= '1';
         wait until '1'=CLK and CLK'event;
         INSTRUCTION_PORT.OP_CODE <= "10011001"; -- unsigned sigmoid activation
-        INSTRUCTION_PORT.CALC_LENGTH <= std_logic_vector(to_unsigned(14, LENGTH_WIDTH));
+        INSTRUCTION_PORT.CALC_LENGTH <= std_logic_vector(to_unsigned(8, LENGTH_WIDTH));
         INSTRUCTION_PORT.BUFFER_ADDRESS <= x"00000E"; -- store to address 14 and up
         INSTRUCTION_PORT.ACC_ADDRESS <= x"0000";
         

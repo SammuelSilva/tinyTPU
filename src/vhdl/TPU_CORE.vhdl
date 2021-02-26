@@ -31,13 +31,13 @@ library IEEE;
     
 entity TPU_CORE is
     generic(
-        MATRIX_WIDTH            : natural := 14; --!< A Largura da MMU e dos barramentos
-        WEIGHT_BUFFER_DEPTH     : natural := 32768; --!< A "profundidade" do Weight Buffer
+        MATRIX_WIDTH            : natural := 8; --!< A Largura da MMU e dos barramentos
+        WEIGHT_BUFFER_DEPTH     : natural := 69632; --!< A "profundidade" do Weight Buffer
         UNIFIED_BUFFER_DEPTH    : natural := 4096 --!< A "Profundidade" do Unified Buffer
     );
     port(
-        CLK, RESET          : in  std_logic;
-        ENABLE              : in  std_logic;
+        CLK, RESET              : in  std_logic;
+        ENABLE                  : in  std_logic;
     
         WEIGHT_WRITE_PORT       : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< Porta de escrita do Host para weight buffer
         WEIGHT_ADDRESS          : in  WEIGHT_ADDRESS_TYPE; --!< Endereço do Host para o weight buffer.
@@ -50,11 +50,11 @@ entity TPU_CORE is
         BUFFER_ENABLE           : in  std_logic; --!< Ativador do Host para o unified buffer.
         BUFFER_WRITE_ENABLE     : in  std_logic_vector(0 to MATRIX_WIDTH-1); --!< Ativador do Host para escrita especifica no unified buffer.
         
-        INSTRUCTION_PORT    : in  INSTRUCTION_TYPE; --!< Porta de Escrita para as instruções
-        INSTRUCTION_ENABLE  : in  std_logic; --!< Ativador de Escrita para instruções
+        INSTRUCTION_PORT        : in  INSTRUCTION_TYPE; --!< Porta de Escrita para as instruções
+        INSTRUCTION_ENABLE      : in  std_logic; --!< Ativador de Escrita para instruções
         
-        BUSY                : out std_logic; --!< A TPU ainda está ocupada e não pode receber nenhuma instrução.
-        SYNCHRONIZE         : out std_logic --!< Interrupção de sincronização.
+        BUSY                    : out std_logic; --!< A TPU ainda está ocupada e não pode receber nenhuma instrução.
+        SYNCHRONIZE             : out std_logic --!< Interrupção de sincronização.
     );
 end entity TPU_CORE;
 
@@ -62,9 +62,9 @@ end entity TPU_CORE;
 architecture BEH of TPU_CORE is
     component WEIGHT_BUFFER is
         generic(
-            MATRIX_WIDTH    : natural := 14;
+            MATRIX_WIDTH    : natural := 8;
             -- How many tiles can be saved
-            TILE_WIDTH      : natural := 32768
+            TILE_WIDTH      : natural := 69632
         );
         port(
             CLK, RESET      : in  std_logic;
@@ -89,10 +89,11 @@ architecture BEH of TPU_CORE is
     signal WEIGHT_ADDRESS0      : WEIGHT_ADDRESS_TYPE;
     signal WEIGHT_EN0           : std_logic;
     signal WEIGHT_READ_PORT0    : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
+    signal WEIGHT_READ_PORT1    : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
     
     component UNIFIED_BUFFER is
         generic(
-            MATRIX_WIDTH    : natural := 14;
+            MATRIX_WIDTH    : natural := 8;
             -- How many tiles can be saved
             TILE_WIDTH      : natural := 4096
         );
@@ -129,7 +130,7 @@ architecture BEH of TPU_CORE is
     
     component SYSTOLIC_DATA_SETUP is
         generic(
-            MATRIX_WIDTH  : natural := 14
+            MATRIX_WIDTH  : natural := 8
         );
         port(
             CLK, RESET      : in  std_logic;
@@ -144,13 +145,14 @@ architecture BEH of TPU_CORE is
     
     component MATRIX_MULTIPLY_UNIT is
         generic(
-            MATRIX_WIDTH    : natural := 14
+            MATRIX_WIDTH    : natural := 8
         );
         port(
             CLK, RESET      : in  std_logic;
             ENABLE          : in  std_logic;
             
-            WEIGHT_DATA     : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
+            WEIGHT_DATA0    : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
+            WEIGHT_DATA1    : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
             WEIGHT_SIGNED   : in  std_logic;
             SYSTOLIC_DATA   : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
             SYSTOLIC_SIGNED : in  std_logic;
@@ -175,7 +177,7 @@ architecture BEH of TPU_CORE is
     
     component REGISTER_FILE is
         generic(
-            MATRIX_WIDTH    : natural := 14;
+            MATRIX_WIDTH    : natural := 8;
             REGISTER_DEPTH  : natural := 512
         );
         port(
@@ -203,7 +205,7 @@ architecture BEH of TPU_CORE is
     
     component ACTIVATION is
         generic(
-            MATRIX_WIDTH        : natural := 14
+            MATRIX_WIDTH        : natural := 8
         );
         port(
             CLK, RESET          : in  std_logic;
@@ -223,7 +225,7 @@ architecture BEH of TPU_CORE is
         
     component WEIGHT_CONTROL is
         generic(
-            MATRIX_WIDTH            : natural := 14
+            MATRIX_WIDTH            : natural := 8
         );
         port(
             CLK, RESET              :  in std_logic;
@@ -255,7 +257,7 @@ architecture BEH of TPU_CORE is
     
     component MATRIX_MULTIPLY_CONTROL is
         generic(
-            MATRIX_WIDTH    : natural := 14
+            MATRIX_WIDTH    : natural := 8
         );
         port(
             CLK, RESET      :  in std_logic;
@@ -290,7 +292,7 @@ architecture BEH of TPU_CORE is
     
     component ACTIVATION_CONTROL is
         generic(
-            MATRIX_WIDTH        : natural := 14
+            MATRIX_WIDTH        : natural := 8
         );
         port(
             CLK, RESET          :  in std_logic;
@@ -376,8 +378,8 @@ begin
 
     WEIGHT_BUFFER_i : WEIGHT_BUFFER
     generic map(
-        MATRIX_WIDTH    => MATRIX_WIDTH, --< Tamanho 14
-        TILE_WIDTH      => WEIGHT_BUFFER_DEPTH --< Tamanho 32768
+        MATRIX_WIDTH    => MATRIX_WIDTH, --< Tamanho 8
+        TILE_WIDTH      => WEIGHT_BUFFER_DEPTH --< Tamanho 69632
     )
     port map(
         CLK             => CLK,
@@ -395,7 +397,7 @@ begin
         EN1             => WEIGHT_ENABLE, -- Recebe o ativador do Input do TPU_CORE
         WRITE_EN1       => WEIGHT_WRITE_ENABLE, -- Recebe o ativador do Input do TPU_CORE
         WRITE_PORT1     => WEIGHT_WRITE_PORT, -- Recebe o endereço de escrita do Input do TPU_CORE
-        READ_PORT1      => open -- Porta Ignorada pois não é usada
+        READ_PORT1      => WEIGHT_READ_PORT1 -- Porta Ignorada pois não é usada
     );
     
     UNIFIED_BUFFER_i : UNIFIED_BUFFER
@@ -447,7 +449,8 @@ begin
         RESET           => RESET,
         ENABLE          => ENABLE,         
         
-        WEIGHT_DATA     => WEIGHT_READ_PORT0, -- Recebe o peso do READ_PORT0 (Componente WEIGHT_BUFFER)
+        WEIGHT_DATA0    => WEIGHT_READ_PORT0, -- Recebe o peso do READ_PORT0 (Componente WEIGHT_BUFFER)
+        WEIGHT_DATA1    => WEIGHT_READ_PORT1,
         WEIGHT_SIGNED   => MMU_WEIGHT_SIGNED, -- Recebe a flag se o peso tem sinal ou nao do WEIGHT_SIGNED (Componente WEIGHT BUFFER)
         SYSTOLIC_DATA   => SDS_SYSTOLIC_OUTPUT, -- Recebe o dado Diagonalizado (Atrasado) do SYSTOLIC_OUTPUT (Componente SYSTOLIC_DATA_SETUP)
         SYSTOLIC_SIGNED => MMU_SYSTOLIC_SIGNED, -- Recebe se o dado diagonalizado tem sinal ou nao do MMU_SIGNED (Componente MATRIX_MULTIPLY_CONTROL)

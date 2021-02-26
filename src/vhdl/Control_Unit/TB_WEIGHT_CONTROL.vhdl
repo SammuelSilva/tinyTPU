@@ -103,14 +103,14 @@ begin
         -- Test
         ENABLE <= '1';
         INSTRUCTION.OP_CODE <= "00001001"; -- load weight
-        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(15, LENGTH_WIDTH));
+        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(14, LENGTH_WIDTH));
         INSTRUCTION.WEIGHT_ADDRESS <= x"0000000021";
         INSTRUCTION_EN <= '1';
         wait until '1'=CLK and CLK'event;
         INSTRUCTION_EN <= '0';
         wait until BUSY = '0';
         INSTRUCTION.OP_CODE <= "00001000"; -- load weight
-        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(14, LENGTH_WIDTH));
+        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(3, LENGTH_WIDTH));
         INSTRUCTION.WEIGHT_ADDRESS <= x"0000000081";
         INSTRUCTION_EN <= '1';
         wait until '1'=CLK and CLK'event;

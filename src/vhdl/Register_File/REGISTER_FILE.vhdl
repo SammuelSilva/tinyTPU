@@ -39,9 +39,9 @@ library IEEE;
 
 --! Criação da entidade Register File
 entity REGISTER_FILE is
-    -- Definiçao dos valores que definem a matrix 14x512 generica, ou seja, não possui modo (direction), que representa a memória
+    -- Definiçao dos valores que definem a matrix 8x512 generica, ou seja, não possui modo (direction), que representa a memória
     generic(
-        MATRIX_WIDTH    : natural := 14;
+        MATRIX_WIDTH    : natural := 8;
         REGISTER_DEPTH  : natural := 512
     );
     port(

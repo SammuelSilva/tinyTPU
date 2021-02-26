@@ -34,7 +34,8 @@ library IEEE;
     
 entity WEIGHT_CONTROL is
     generic(
-        MATRIX_WIDTH            : natural := 14
+        MATRIX_WIDTH            : natural := 8;
+        MATRIX_HALF             : natural := (8-1)/NUMBER_OF_MULT
     );
     port(
         CLK, RESET              :  in std_logic;
@@ -183,6 +184,7 @@ begin
         ENABLE      => ENABLE, -- Ativação do processo de contagem
         END_VAL     => INSTRUCTION.CALC_LENGTH, -- Busca o tamanho da instrução
         LOAD        => LENGTH_LOAD, -- Sinal de aviso para o carregamento do valor a ser atingido pelo contador
+        COUNT_VAL   => open,
         COUNT_EVENT => LENGTH_EVENT -- Sinal de aviso se o processo de contagem terminou
     );
     
@@ -257,10 +259,10 @@ begin
     WEIGHT_ADDRESS_COUNTER:
     process(WEIGHT_ADDRESS_cs) is
     begin
-        if WEIGHT_ADDRESS_cs = std_logic_vector(to_unsigned(MATRIX_WIDTH-1, WEIGHT_COUNTER_WIDTH)) then
+        if WEIGHT_ADDRESS_cs = std_logic_vector(to_unsigned(MATRIX_HALF, WEIGHT_COUNTER_WIDTH)) then
             WEIGHT_ADDRESS_ns <= (others => '0');
         else
-            WEIGHT_ADDRESS_ns <= std_logic_vector(unsigned(WEIGHT_ADDRESS_cs) + ADD_ONE);
+            WEIGHT_ADDRESS_ns <= std_logic_vector(unsigned(WEIGHT_ADDRESS_cs) + ADD_ONE); --ADD_TWO?
         end if;
     end process WEIGHT_ADDRESS_COUNTER;
         

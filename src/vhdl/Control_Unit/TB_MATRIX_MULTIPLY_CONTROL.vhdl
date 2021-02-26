@@ -125,7 +125,8 @@ begin
         INSTRUCTION_EN <= '1';
         wait until '1'=CLK and CLK'event;
         INSTRUCTION_EN <= '0';
-        wait;
+        wait until BUSY = '0';
+        stop_the_clock <= true;
     end process STIMULUS;
 
     CLOCK_GEN: 

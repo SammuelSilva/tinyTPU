@@ -34,7 +34,7 @@ library IEEE;
     
 entity ACTIVATION_CONTROL is
     generic(
-        MATRIX_WIDTH        : natural := 14
+        MATRIX_WIDTH        : natural := 8
     );
     port(
         CLK, RESET          :  in std_logic;
