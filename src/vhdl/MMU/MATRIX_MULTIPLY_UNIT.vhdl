@@ -42,9 +42,7 @@ entity MATRIX_MULTIPLY_UNIT is
         
         WEIGHT_DATA0    : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< Input dos pesos, conectados com a entrada de pesos no MACC.
         WEIGHT_DATA1    : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< Input dos pesos, conectados com a entrada de pesos no MACC.
-        WEIGHT_SIGNED   : in  std_logic; --!< Determina se o valor do Peso da entrada é "Signed" ou "Unsigned"
         SYSTOLIC_DATA   : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1); --!< Os dados de entrada na diagonal.
-        SYSTOLIC_SIGNED : in  std_logic; --!< Determina se o valor dos dados Sistolicos da entrada é "Signed" ou "Unsigned"
         
         ACTIVATE_WEIGHT : in  std_logic; --!< Ativa os pesos carregados de forma sequenciais.
         LOAD_WEIGHT     : in  std_logic; --!< Realiza o pre-carregamento de uma coluna com o WEIGHT_DATA.
@@ -86,7 +84,6 @@ architecture BEH of MATRIX_MULTIPLY_UNIT is
     signal WEIGHT_ADDRESS_cs : BYTE_TYPE := (others => '0');
     
     signal LOAD_WEIGHT_FLAG         : std_logic := '0';
-    signal SIGN_EXTEND_WEIGHT_FLAG  : std_logic := '1';
 
     -- Sinais para conversão dos endereços
     signal LOAD_WEIGHT_MAP  : std_logic_vector(0 to MATRIX_HALF);
@@ -103,10 +100,6 @@ architecture BEH of MATRIX_MULTIPLY_UNIT is
     signal EXTENDED_WEIGHT_DATA1      : EXTENDED_BYTE_ARRAY(0 to MATRIX_WIDTH-1);
 
     signal EXTENDED_SYSTOLIC_DATA   : EXTENDED_BYTE_ARRAY(0 to MATRIX_WIDTH-1) := (others => (others => '0'));
-    
-    -- Sinais para extensão dos sinais da resposta
-    signal SIGN_CONTROL_cs  : std_logic_vector(0 to 2+MATRIX_HALF) := (others => '0'); -- Possui um delay de 2 registros causados pelo MACC
-    signal SIGN_CONTROL_ns  : std_logic_vector(0 to 2+MATRIX_HALF);
 begin
     
     -- Linear shift register: Controla a ativação com os pesos, é uma fila FIFO.
@@ -124,10 +117,6 @@ begin
         --> ACTIVATE_CONTROL_cs <= ACTIVATE_CONTROL_ns;(ACTIVATE_CONTROL_cs <= "0100")
     ACTIVATE_CONTROL_ns(1 to MATRIX_HALF-1) <= ACTIVATE_CONTROL_cs(0 to MATRIX_HALF-1-1);
     ACTIVATE_CONTROL_ns(0) <= ACTIVATE_WEIGHT;
-
-    -- Linear shift register: Controla a variação de sinal, mas mesmo que seja '1' pode ser que o dado relativo a posicao no SIGN_CONTROL nao seja negativo
-    SIGN_CONTROL_ns(1 to 2+MATRIX_HALF) <= SIGN_CONTROL_cs(0 to 2+MATRIX_HALF-1);
-    SIGN_CONTROL_ns(0) <= SYSTOLIC_SIGNED;
     
     -- Concatena o valor de ativacao novo do Weight com o Antigo, descartando o ultimo valor.
     ACTIVATE_MAP <= ACTIVATE_CONTROL_ns(0) & ACTIVATE_CONTROL_cs;
@@ -152,31 +141,22 @@ begin
     
     -- Função que realiza uma concatenação do Dado com o Sinal
     SIGN_EXTEND_WEIGHT:
-    process(WEIGHT_DATA0, WEIGHT_DATA1, WEIGHT_SIGNED) is
-    -- WEIGHT_DATA <-> INPUT, WEIGHT_SIGNED <-> INPUT
+    process(WEIGHT_DATA0, WEIGHT_DATA1) is
+    -- WEIGHT_DATA <-> INPUT
         begin
         for i in 0 to MATRIX_WIDTH-1 loop
-                -- <WEIGHT_INPUT>
-            if WEIGHT_SIGNED = '1' then
-                EXTENDED_WEIGHT_DATA0(i) <= WEIGHT_DATA0(i)(BYTE_WIDTH-1) & WEIGHT_DATA0(i);
-                EXTENDED_WEIGHT_DATA1(i) <= WEIGHT_DATA1(i)(BYTE_WIDTH-1) & WEIGHT_DATA1(i);
-            else
-                EXTENDED_WEIGHT_DATA0(i) <= '0' & WEIGHT_DATA0(i);
-                EXTENDED_WEIGHT_DATA1(i) <= '0' & WEIGHT_DATA1(i);
-            end if;
+            -- <WEIGHT_INPUT>
+            EXTENDED_WEIGHT_DATA0(i) <= WEIGHT_DATA0(i)(BYTE_WIDTH-1) & WEIGHT_DATA0(i);
+            EXTENDED_WEIGHT_DATA1(i) <= WEIGHT_DATA1(i)(BYTE_WIDTH-1) & WEIGHT_DATA1(i);
         end loop;
     end process SIGN_EXTEND_WEIGHT;
 
     SIGN_EXTEND_SYSTOLIC:
-    process(SYSTOLIC_DATA, SIGN_CONTROL_ns) is
+    process(SYSTOLIC_DATA) is
     --SYSTOLIC_DATA <-> INPUT, SIGN_CONTROL_ns(0) <-> SYSTOLIC_SIGNED, SIGN_CONTROL_ns(1 to n-1) <-> SIGN_CONTROL_cs(0 to n-2)
         begin
         for i in 0 to MATRIX_WIDTH-1 loop
-            if SIGN_CONTROL_ns(i/NUMBER_OF_MULT) = '1' then 
-                EXTENDED_SYSTOLIC_DATA(i) <= SYSTOLIC_DATA(i)(BYTE_WIDTH-1) & SYSTOLIC_DATA(i);
-            else
-                EXTENDED_SYSTOLIC_DATA(i) <= '0' & SYSTOLIC_DATA(i);
-            end if;
+            EXTENDED_SYSTOLIC_DATA(i) <= SYSTOLIC_DATA(i)(BYTE_WIDTH-1) & SYSTOLIC_DATA(i);
         end loop;
     end process SIGN_EXTEND_SYSTOLIC;
    
@@ -323,19 +303,15 @@ begin
     end generate MACC_GEN;
     
     RESULT_ASSIGNMENT:
-    process(INTERIM_RESULT, SIGN_CONTROL_cs(2+MATRIX_HALF-1)) is
+    process(INTERIM_RESULT) is
         -- INTERIM_RESULT <-> PARTIAL_SUM (FINAL), SIGN_CONTROL_cs(ULTIMA POSICAO) 
         variable RESULT_DATA_v  : std_logic_vector(2*EXTENDED_BYTE_WIDTH+(MATRIX_WIDTH-1)-(MATRIX_HALF-1)-1 downto 0);
         variable EXTEND_v       : std_logic_vector(4*BYTE_WIDTH-1 downto 2*EXTENDED_BYTE_WIDTH+(MATRIX_WIDTH-1)-(MATRIX_HALF-1)); -- 32bits Downto 32bits (tem 1 posicao)
     begin
         for i in MATRIX_WIDTH-1 downto 0 loop
             RESULT_DATA_v := INTERIM_RESULT(MATRIX_HALF, i)(2*EXTENDED_BYTE_WIDTH+(MATRIX_WIDTH-1)-(MATRIX_HALF-1)-1 downto 0); -- RESULT_DATA_v armazena todos os valores da ultima linha da coluna i, exceto o ultimo bit armazenado
-            if SIGN_CONTROL_cs(2+MATRIX_HALF-1) = '1' then
-                EXTEND_v := (others => INTERIM_RESULT(MATRIX_HALF, i)(2*EXTENDED_BYTE_WIDTH+(MATRIX_WIDTH-1)-(MATRIX_HALF-1)-1)); -- Guarda o valor do ultimo dado (SINAL)
-            else
-                EXTEND_v := (others => '0'); -- SINAL POSITIVO
-            end if;
-            
+            EXTEND_v := (others => INTERIM_RESULT(MATRIX_HALF, i)(2*EXTENDED_BYTE_WIDTH+(MATRIX_WIDTH-1)-(MATRIX_HALF-1)-1)); -- Guarda o valor do ultimo dado (SINAL)
+
             RESULT_DATA(i) <= EXTEND_v & RESULT_DATA_v; -- Concatena o resultado com o sinal
         end loop;
     end process RESULT_ASSIGNMENT;
@@ -346,12 +322,9 @@ begin
         if CLK'event and CLK = '1' then
             if RESET = '1' then
                 ACTIVATE_CONTROL_cs     <= (others => '0');
-                SIGN_CONTROL_cs         <= (others => '0');
                 LOAD_WEIGHT_FLAG        <= '0';
-                SIGN_EXTEND_WEIGHT_FLAG <= '1';
             else
                 ACTIVATE_CONTROL_cs <= ACTIVATE_CONTROL_ns;
-                SIGN_CONTROL_cs     <= SIGN_CONTROL_ns;
             end if;
         end if;
     end process SEQ_LOG;

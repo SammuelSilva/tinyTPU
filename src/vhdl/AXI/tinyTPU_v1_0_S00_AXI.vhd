@@ -43,6 +43,7 @@ entity tinyTPU_v1_0_S00_AXI is
 	port (
 		-- Inserção de portas do usuario: Begin
         SYNCHRONIZE       : out std_logic;
+        LOAD_INTERRUPTION : out std_logic;
         -- End
         -->> Não modifique as portas apos esta linha
 
@@ -155,7 +156,7 @@ architecture arch_imp of tinyTPU_v1_0_S00_AXI is
     component TPU is
         generic(
             MATRIX_WIDTH            : natural := 8;
-            WEIGHT_BUFFER_DEPTH     : natural := 69632;
+            WEIGHT_BUFFER_DEPTH     : natural := 32768;
             UNIFIED_BUFFER_DEPTH    : natural := 4096
         );  
         port(   
@@ -183,7 +184,8 @@ architecture arch_imp of tinyTPU_v1_0_S00_AXI is
             BUFFER_ENABLE           : in  std_logic;
             BUFFER_WRITE_ENABLE     : in  std_logic_vector(0 to MATRIX_WIDTH-1);
             -- Memory synchronization flag for interrupt 
-            SYNCHRONIZE             : out std_logic
+            SYNCHRONIZE             : out std_logic;
+            LOAD_INTERRUPTION       : out std_logic
         );
     end component TPU;
     for all : TPU use entity WORK.TPU(BEH);
@@ -192,10 +194,10 @@ architecture arch_imp of tinyTPU_v1_0_S00_AXI is
     type FSM_TYPE is (IDLE, WRITE_ADDRESS, WRITE_DATA, WRITE_RESPONSE, READ_ADDRESS, READ_DATA, READ_RESPONSE);
     
     constant MATRIX_WIDTH           : natural := 8;
-    constant WEIGHT_BUFFER_DEPTH    : natural := 69632;
+    constant WEIGHT_BUFFER_DEPTH    : natural := 16;
     constant UNIFIED_BUFFER_DEPTH   : natural := 4096;
     
-    constant MATRIX_ADDRESS_WIDTH       : natural := natural(ceil(log2(real(MATRIX_WIDTH) / 4.0 - 1.0))); -- Atomic range - LSBs (size 2)
+    constant MATRIX_ADDRESS_WIDTH       : natural := natural(ceil(log2(real(MATRIX_WIDTH) / 4.0 ))); -- Atomic range - LSBs (size 2)
     constant WEIGHT_ADDRESS_BASE        : natural := 0;
     constant WEIGHT_ADDRESS_END         : natural := WEIGHT_BUFFER_DEPTH-1;
     constant BUFFER_ADDRESS_BASE        : natural := WEIGHT_BUFFER_DEPTH;
@@ -345,7 +347,8 @@ begin
         BUFFER_ADDRESS          => BUFFER_ADDRESS,
         BUFFER_ENABLE           => BUFFER_ENABLE,
         BUFFER_WRITE_ENABLE     => BUFFER_WRITE_ENABLE,
-        SYNCHRONIZE             => SYNCHRONIZE
+        SYNCHRONIZE             => SYNCHRONIZE,
+        LOAD_INTERRUPTION       => LOAD_INTERRUPTION
     );
 
     -- Registradores para inserção de dados no processo TPU_READ
@@ -633,10 +636,12 @@ begin
     process(SLAVE_WRITE_EN, WRITE_ADDRESS_cs, WRITE_DATA_cs, S_AXI_WSTRB, INSTRUCTION_FULL) is
         variable UPPER_WRITE_ADDRESS_v : std_logic_vector(ADDRESS_WIDTH-MATRIX_ADDRESS_WIDTH-1 downto 0);
         variable LOWER_WRITE_ADDRESS_v : std_logic_vector(MATRIX_ADDRESS_WIDTH-1 downto 0);
+        variable LOWER_INSTRUCTION_ADDRESS_v : std_logic_vector(MATRIX_ADDRESS_WIDTH downto 0);
     begin
         UPPER_WRITE_ADDRESS_v := WRITE_ADDRESS_cs(ADDRESS_WIDTH-1 downto MATRIX_ADDRESS_WIDTH); -- (9 downto 2)
         LOWER_WRITE_ADDRESS_v := WRITE_ADDRESS_cs(MATRIX_ADDRESS_WIDTH-1 downto 0); -- (1 downto 0)
-        
+        LOWER_INSTRUCTION_ADDRESS_v := WRITE_ADDRESS_cs(MATRIX_ADDRESS_WIDTH downto 0);
+
         -- Connect write data to instruction ports
         LOWER_INSTRUCTION_WORD  <= WRITE_DATA_cs;
         MIDDLE_INSTRUCTION_WORD <= WRITE_DATA_cs;
@@ -659,7 +664,7 @@ begin
         BUFFER_ADDRESS_REG0_ns(BUFFER_ADDRESS_WIDTH-1 downto INSTRUCTION_BIT_POSITION) <= (others => '0');
         
         if SLAVE_WRITE_EN = '1' then
-            if    UPPER_WRITE_ADDRESS_v(     BUFFER_BIT_POSITION) = '0' then -- Weight space (Escrita do peso)
+            if UPPER_WRITE_ADDRESS_v(BUFFER_BIT_POSITION) = '0' then -- Weight space (Escrita do peso)
                 WEIGHT_ENABLE_ON_WRITE_REG0_ns <= '1'; -- Permite a escrita byte por byte 
                 
                 for i in 0 to MATRIX_WIDTH-1 loop
@@ -699,7 +704,7 @@ begin
                 INSTRUCTION_WRITE_EN <= "000"; -- Desativa a escrita na fifo
                 WRITE_ACCEPT <= '1';-- Ativa para passar para proxima fase na FSM: WRITE_RESPONSE
             else -- Instruction space
-                case to_integer(unsigned(LOWER_WRITE_ADDRESS_v)) is
+                case to_integer(unsigned(LOWER_INSTRUCTION_ADDRESS_v)) is
                     when 1 => -- Carrega the Lower Instruction
                         if INSTRUCTION_FULL = '1' then
                             INSTRUCTION_WRITE_EN <= "000";
@@ -780,7 +785,7 @@ begin
         end if;
         
         -- Read
-        if    UPPER_READ_ADDRESS_DELAY2_cs(     BUFFER_BIT_POSITION) = '0' then -- Weight space
+        if UPPER_READ_ADDRESS_DELAY2_cs(BUFFER_BIT_POSITION) = '0' then -- Weight space
             READ_DATA_ns <= (others => '0'); -- Weights are write-only (so são lidos na arquitetura da TPU)
         elsif UPPER_READ_ADDRESS_DELAY2_cs(INSTRUCTION_BIT_POSITION) = '0' then -- Buffer space
             for i in 0 to 3 loop

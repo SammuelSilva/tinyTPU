@@ -30,7 +30,9 @@ end entity TB_TPU;
 architecture BEH of TB_TPU is
     component DUT is
         generic(
-            MATRIX_WIDTH            : natural := 14
+            MATRIX_WIDTH            : natural := 8;
+            WEIGHT_BUFFER_DEPTH     : natural := 32768 
+
         );  
         port(   
             CLK, RESET              : in  std_logic;
@@ -57,13 +59,16 @@ architecture BEH of TB_TPU is
             BUFFER_ENABLE           : in  std_logic;
             BUFFER_WRITE_ENABLE     : in  std_logic_vector(0 to MATRIX_WIDTH-1);
             -- Memory synchronization flag for interrupt 
-            SYNCHRONIZE             : out std_logic
+            SYNCHRONIZE             : out std_logic;
+            LOAD_INTERRUPTION       : out std_logic
+
         );
     end component DUT;
     for all : DUT use entity WORK.TPU(BEH);
     
-    constant MATRIX_WIDTH           : natural := 14;
-    
+    constant MATRIX_WIDTH           : natural := 8;
+    constant WEIGHT_BUFFER_DEPTH    : natural := 15; 
+
     signal CLK                      : std_logic;
     signal RESET                    : std_logic;
     signal ENABLE                   : std_logic;
@@ -90,7 +95,8 @@ architecture BEH of TB_TPU is
     signal BUFFER_WRITE_ENABLE      : std_logic_vector(0 to MATRIX_WIDTH-1);
         
     signal SYNCHRONIZE              : std_logic;
-    
+    signal LOAD_INTERRUPTION        : std_logic;
+
     -- for clock gen
     constant clock_period   : time := 10 ns;
     signal stop_the_clock   : boolean;
@@ -100,29 +106,31 @@ architecture BEH of TB_TPU is
 begin
     DUT_i : DUT
     generic map(
-        MATRIX_WIDTH => MATRIX_WIDTH
+        MATRIX_WIDTH        => MATRIX_WIDTH,
+        WEIGHT_BUFFER_DEPTH => WEIGHT_BUFFER_DEPTH
     )
     port map(
-        CLK => CLK,
-        RESET => RESET,
-        ENABLE => ENABLE,
-        --TPU_MAX_INDEX => TPU_MAX_INDEX,
-        LOWER_INSTRUCTION_WORD => LOWER_INSTRUCTION_WORD,
+        CLK                     => CLK,
+        RESET                   => RESET,
+        ENABLE                  => ENABLE,
+        --TPU_MAX_INDEX           => TPU_MAX_INDEX,
+        LOWER_INSTRUCTION_WORD  => LOWER_INSTRUCTION_WORD,
         MIDDLE_INSTRUCTION_WORD => MIDDLE_INSTRUCTION_WORD,
-        UPPER_INSTRUCTION_WORD => UPPER_INSTRUCTION_WORD,
-        INSTRUCTION_WRITE_EN => INSTRUCTION_WRITE_EN,
-        INSTRUCTION_EMPTY => INSTRUCTION_EMPTY,
-        INSTRUCTION_FULL => INSTRUCTION_FULL,
-        WEIGHT_WRITE_PORT => WEIGHT_WRITE_PORT,
-        WEIGHT_ADDRESS => WEIGHT_ADDRESS,
-        WEIGHT_ENABLE => WEIGHT_ENABLE,
-        WEIGHT_WRITE_ENABLE => WEIGHT_WRITE_ENABLE,
-        BUFFER_WRITE_PORT => BUFFER_WRITE_PORT,
-        BUFFER_READ_PORT => BUFFER_READ_PORT,
-        BUFFER_ADDRESS => BUFFER_ADDRESS,
-        BUFFER_ENABLE => BUFFER_ENABLE,
-        BUFFER_WRITE_ENABLE => BUFFER_WRITE_ENABLE,
-        SYNCHRONIZE => SYNCHRONIZE
+        UPPER_INSTRUCTION_WORD  => UPPER_INSTRUCTION_WORD,
+        INSTRUCTION_WRITE_EN    => INSTRUCTION_WRITE_EN,
+        INSTRUCTION_EMPTY       => INSTRUCTION_EMPTY,
+        INSTRUCTION_FULL        => INSTRUCTION_FULL,
+        WEIGHT_WRITE_PORT       => WEIGHT_WRITE_PORT,
+        WEIGHT_ADDRESS          => WEIGHT_ADDRESS,
+        WEIGHT_ENABLE           => WEIGHT_ENABLE,
+        WEIGHT_WRITE_ENABLE     => WEIGHT_WRITE_ENABLE,
+        BUFFER_WRITE_PORT       => BUFFER_WRITE_PORT,
+        BUFFER_READ_PORT        => BUFFER_READ_PORT,
+        BUFFER_ADDRESS          => BUFFER_ADDRESS,
+        BUFFER_ENABLE           => BUFFER_ENABLE,
+        BUFFER_WRITE_ENABLE     => BUFFER_WRITE_ENABLE,
+        SYNCHRONIZE             => SYNCHRONIZE,
+        LOAD_INTERRUPTION       => LOAD_INTERRUPTION
     );
     
     LOWER_INSTRUCTION_WORD <= INSTRUCTION_TO_BITS(INSTRUCTION)(4*BYTE_WIDTH-1 downto 0);
@@ -151,7 +159,7 @@ begin
         RESET <= '0';
         wait until '1'=CLK and CLK'event;
         ENABLE <= '1';
-        INSTRUCTION.OP_CODE <= "00001000"; -- load weight
+        INSTRUCTION.OP_CODE <= x"FE"; -- load weight
         INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(14, LENGTH_WIDTH));
         INSTRUCTION.BUFFER_ADDRESS <= x"000000";
         INSTRUCTION.ACC_ADDRESS <= x"0000";
@@ -172,7 +180,15 @@ begin
         
         INSTRUCTION_WRITE_EN <= (others => '1');
         wait until '1'=CLK and CLK'event;
-        INSTRUCTION.OP_CODE <= "11111111"; -- synchronize
+        INSTRUCTION.OP_CODE <= x"FE"; -- load weight
+        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(14, LENGTH_WIDTH));
+        INSTRUCTION.BUFFER_ADDRESS <= x"000000";
+        INSTRUCTION.ACC_ADDRESS <= x"0000";
+        
+        INSTRUCTION_WRITE_EN <= (others => '1');
+        wait until '1'=CLK and CLK'event;
+        
+        INSTRUCTION.OP_CODE <= x"FF"; -- synchronize
         INSTRUCTION.CALC_LENGTH <= x"00000000";
         INSTRUCTION.BUFFER_ADDRESS <= x"000000";
         INSTRUCTION.ACC_ADDRESS <= x"0000";

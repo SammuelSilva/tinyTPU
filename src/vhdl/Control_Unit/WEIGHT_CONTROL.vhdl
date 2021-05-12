@@ -49,9 +49,7 @@ entity WEIGHT_CONTROL is
         
         LOAD_WEIGHT             : out std_logic; --!< Flag de Carregamento de Peso para a Matrix Multiply Unit.
         WEIGHT_ADDRESS          : out BYTE_TYPE; --!< Endereço do peso para a Matrix Multiply Unit.
-        
-        WEIGHT_SIGNED           : out std_logic; --!< Determina se os pesosa são signed ou unsigned.
-                
+                        
         BUSY                    : out std_logic; --!< Se a Control Unit esta ocupada, uma nova instrução nao deve ser adicionada.
         RESOURCE_BUSY           : out std_logic  --!< O recurso esta em uso e a instrução não esta totalmente terminada.
     );
@@ -107,11 +105,7 @@ architecture BEH of WEIGHT_CONTROL is
     -- Registradores que carregam o sinal que Determina se os pesos são signed ou unsigned.
     signal WEIGHT_SIGNED_cs         : std_logic := '0';
     signal WEIGHT_SIGNED_ns         : std_logic;
-    
-    -- Pipeline para Carregar o sinal da operação
-    signal SIGNED_PIPE_cs           : std_logic_vector(0 to 2) := (others => '0');
-    signal SIGNED_PIPE_ns           : std_logic_vector(0 to 2);
-    
+       
     -- Sinais para definir se uma instrução deve ser carregada ou resetada
     signal SIGNED_LOAD              : std_logic;
     signal SIGNED_RESET             : std_logic;
@@ -215,15 +209,7 @@ begin
         -- Provavelmente as 3 instruções abaixo ocorre de baixo para cima
     LOAD_WEIGHT_ns(0)       <= '0' when WEIGHT_READ_EN_cs = '0' else READ_PIPE2_cs;
     LOAD_WEIGHT_ns(1 to 2)  <= LOAD_WEIGHT_cs(0 to 1);
-    LOAD_WEIGHT             <= LOAD_WEIGHT_cs(2);
-    
-    -- Carrega o sinal da operação se o SIGNED_LOAD = 1 (Valor que vem do processo Control) então WEIGHT_SIGNED_cs = WEIGHT_SIGNED_ns
-        -- Provavelmente as 3 instruções abaixo ocorre de baixo para cima
-    WEIGHT_SIGNED_ns    <= INSTRUCTION.OP_CODE(0);
-    SIGNED_PIPE_ns(0)   <= WEIGHT_SIGNED_cs; --  WEIGHT_SIGNED_cs <- WEIGHT_SIGNED_ns <- INSTRUCTION.OP_CODE(0)
-    SIGNED_PIPE_ns(1)   <= SIGNED_PIPE_cs(0);
-    SIGNED_PIPE_ns(2)   <= SIGNED_PIPE_cs(1);
-    WEIGHT_SIGNED       <= '0' when LOAD_WEIGHT_cs(2) = '0' else SIGNED_PIPE_cs(2); -- Carrega o ultimo valor 
+    LOAD_WEIGHT             <= LOAD_WEIGHT_cs(2); 
     
     -- Pipeline do Endereço dos pesos
     WEIGHT_PIPE0_ns <= WEIGHT_ADDRESS_cs; -- WEIGHT_ADDRESS_cs <- WEIGHT_ADDRESS_ns
@@ -247,11 +233,9 @@ begin
         variable RESOURCE_BUSY_v : std_logic;
     begin
         RESOURCE_BUSY_v := RUNNING_cs; -- Recebe o sinal da instrução atual
-        --if RESOURCE_BUSY_v = '0' then
             for i in 0 to 2 loop
                 RESOURCE_BUSY_v := RESOURCE_BUSY_v or RUNNING_PIPE_cs(i);
             end loop;
-        --end if;
         RESOURCE_BUSY <= RESOURCE_BUSY_v;
     end process RESOURCE;
     
@@ -278,7 +262,6 @@ begin
         variable WEIGHT_READ_EN_ns_v        : std_logic;
         variable LENGTH_LOAD_v              : std_logic;
         variable LENGTH_RESET_v             : std_logic;
-        variable SIGNED_LOAD_v              : std_logic;
         variable SIGNED_RESET_v             : std_logic;
     begin
         INSTRUCTION_EN_v    := INSTRUCTION_EN; -- Sinal de que possui uma instrução para ser carregada
@@ -298,7 +281,6 @@ begin
                 WEIGHT_READ_EN_ns_v := '1';
                 LENGTH_LOAD_v       := '1';
                 LENGTH_RESET_v      := '1';
-                SIGNED_LOAD_v       := '1';
                 SIGNED_RESET_v      := '0';
             else
                 RUNNING_ns_v        := '0';
@@ -306,7 +288,6 @@ begin
                 WEIGHT_READ_EN_ns_v := '0';
                 LENGTH_LOAD_v       := '0';
                 LENGTH_RESET_v      := '0';
-                SIGNED_LOAD_v       := '0';
                 SIGNED_RESET_v      := '0';
             end if;
         else -- Se RUNNING_CS for diferente de 1 mas um Sinal de Evento foi atingido no DSP_COUNTER então os valores serão resetados
@@ -316,7 +297,6 @@ begin
                 WEIGHT_READ_EN_ns_v := '0';
                 LENGTH_LOAD_v       := '0';
                 LENGTH_RESET_v      := '0';
-                SIGNED_LOAD_v       := '0';
                 SIGNED_RESET_v      := '1'; -- SINAL PARA RESET 
             else -- Caso contrario continua carregando pesos
                 RUNNING_ns_v        := '1';
@@ -324,7 +304,6 @@ begin
                 WEIGHT_READ_EN_ns_v := '1';
                 LENGTH_LOAD_v       := '0';
                 LENGTH_RESET_v      := '0';
-                SIGNED_LOAD_v       := '0';
                 SIGNED_RESET_v      := '0';
             end if;
         end if;
@@ -334,7 +313,6 @@ begin
         WEIGHT_READ_EN_ns <= WEIGHT_READ_EN_ns_v; -- Sinal para leitura de pesos
         LENGTH_LOAD <= LENGTH_LOAD_v; -- SInal para o carregamento de um novo valor limite (DSP_COUNTER)
         LENGTH_RESET <= LENGTH_RESET_v; -- Sinal para resetar os valores no DSP_COUNTER e zerar o weight_address
-        SIGNED_LOAD <= SIGNED_LOAD_v; -- Sinal para a busca de SINAL na Instrução
         SIGNED_RESET <= SIGNED_RESET_v; -- Sinal para zerar os pipes
     end process CONTROL;
     
@@ -354,7 +332,6 @@ begin
                 WEIGHT_PIPE4_cs     <= (others => '0');
                 WEIGHT_PIPE5_cs     <= (others => '0');
                 BUFFER_PIPE_cs      <= (others => '0');
-                SIGNED_PIPE_cs      <= (others => '0');
             else
                 if ENABLE = '1' then
                     WEIGHT_READ_EN_cs   <= WEIGHT_READ_EN_ns;
@@ -368,7 +345,6 @@ begin
                     WEIGHT_PIPE4_cs     <= WEIGHT_PIPE4_ns;
                     WEIGHT_PIPE5_cs     <= WEIGHT_PIPE5_ns;
                     BUFFER_PIPE_cs      <= BUFFER_PIPE_ns;
-                    SIGNED_PIPE_cs      <= SIGNED_PIPE_ns;
                 end if;
             end if;
             
@@ -381,15 +357,10 @@ begin
             end if;
             
             if SIGNED_RESET = '1' then -- Reseta os pipes
-                WEIGHT_SIGNED_cs    <= '0';
                 READ_PIPE0_cs       <= '0';
                 READ_PIPE1_cs       <= '0';
                 READ_PIPE2_cs       <= '0';
-            else
-                if SIGNED_LOAD = '1' then -- carrega um novo sinal
-                    WEIGHT_SIGNED_cs    <= WEIGHT_SIGNED_ns;
-                end if;
-                
+            else     
                 if ENABLE = '1' then
                     -- Pipeline que carregam o valor da flag WEIGHT_READ_EN
                     READ_PIPE0_cs       <= READ_PIPE0_ns;

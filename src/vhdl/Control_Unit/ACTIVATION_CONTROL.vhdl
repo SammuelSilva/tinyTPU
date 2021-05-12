@@ -45,7 +45,6 @@ entity ACTIVATION_CONTROL is
         
         ACC_TO_ACT_ADDR     : out ACCUMULATOR_ADDRESS_TYPE; --!< Endereço para os acumuladores (Tamanho 16)
         ACTIVATION_FUNCTION : out ACTIVATION_BIT_TYPE; --!< O tipo de função de ativação a ser calculada (Tamanho 4)
-        SIGNED_NOT_UNSIGNED : out std_logic; --!< Determina se o Input ou Output é possui sinal ou não
         
         ACT_TO_BUF_ADDR     : out BUFFER_ADDRESS_TYPE; --!< Endereço para o Unified Buffer
         BUF_WRITE_EN        : out std_logic; --!< Flag de ativação de escrita para o Unified Buffer
@@ -88,7 +87,7 @@ architecture BEH of ACTIVATION_CONTROL is
             COUNT_EVENT : out std_logic--!< O evento, que sera ativado quando o valor final for atingido. 
         );
     end component COUNTER;
-    for all : COUNTER use entity WORK.DSP_COUNTER(BEH);
+    for all : COUNTER use entity WORK.DSP_COUNTER_BUFF_ACC(BEH);
     
     -- O mesmo contador de ACC_LOAD_COUNTER porem este so pode ser resetado atraves do LOAD.
     component LOAD_COUNTER is
@@ -105,7 +104,7 @@ architecture BEH of ACTIVATION_CONTROL is
             COUNT_VAL   : out std_logic_vector(COUNTER_WIDTH-1 downto 0) --!< O valor atual do contador.
         );
     end component LOAD_COUNTER;
-    for all : LOAD_COUNTER use entity WORK.DSP_LOAD_COUNTER(BEH);
+    for all : LOAD_COUNTER use entity WORK.DSP_LOAD_COUNTER_BUFF_ACC(BEH);
     
 
     -- Registradores temporarios para os Endereço dos acumuladores (tamanho 16)
@@ -120,10 +119,6 @@ architecture BEH of ACTIVATION_CONTROL is
     signal ACTIVATION_FUNCTION_cs : ACTIVATION_BIT_TYPE := (others => '0');
     signal ACTIVATION_FUNCTION_ns : ACTIVATION_BIT_TYPE;
     
-    -- Registradores temporarios para flag do sinal de entrada/saida
-    signal SIGNED_NOT_UNSIGNED_cs : std_logic := '0';
-    signal SIGNED_NOT_UNSIGNED_ns : std_logic;
-
     -- Registradores temporarios para Flag de ativação de escrita para o Unified Buffer
     signal BUF_WRITE_EN_cs : std_logic := '0';
     signal BUF_WRITE_EN_ns : std_logic;
@@ -174,10 +169,6 @@ architecture BEH of ACTIVATION_CONTROL is
     
     signal ACT_TO_BUF_DELAY_cs  : BUFFER_ADDRESS_ARRAY_TYPE := (others => (others => '0'));
     signal ACT_TO_BUF_DELAY_ns  : BUFFER_ADDRESS_ARRAY_TYPE;
-
-    -- Signed_NOT_Unsigned_DELAY
-    signal S_NOT_U_DELAY_cs     : std_logic_vector(0 to 3+MATRIX_WIDTH+2+7-1) := (others => '0');
-    signal S_NOT_U_DELAY_ns     : std_logic_vector(0 to 3+MATRIX_WIDTH+2+7-1);
         
     signal WRITE_EN_DELAY_cs    : std_logic_vector(0 to 3+MATRIX_WIDTH+2+7+3-1) := (others => '0');
     signal WRITE_EN_DELAY_ns    : std_logic_vector(0 to 3+MATRIX_WIDTH+2+7+3-1);
@@ -187,14 +178,12 @@ begin
     -- Os dados passam pelos registradores Delay, não passando a ultima posição vinda do "cs" e não modificando a primeira posição do receptor "ns".
     ACC_ADDRESS_DELAY_ns(1 to 3+MATRIX_WIDTH+2-1) <= ACC_ADDRESS_DELAY_cs(0 to 3+MATRIX_WIDTH+2-2);
     ACTIVATION_DELAY_ns(1 to 3+MATRIX_WIDTH+2+7-1) <= ACTIVATION_DELAY_cs(0 to 3+MATRIX_WIDTH+2+7-2);
-    S_NOT_U_DELAY_ns(1 to 3+MATRIX_WIDTH+2+7-1) <= S_NOT_U_DELAY_cs(0 to 3+MATRIX_WIDTH+2+7-2);
     ACT_TO_BUF_DELAY_ns(1 to 3+MATRIX_WIDTH+2+7+3-1) <= ACT_TO_BUF_DELAY_cs(0 to 3+MATRIX_WIDTH+2+7+3-2);
     WRITE_EN_DELAY_ns(1 to 3+MATRIX_WIDTH+2+7+3-1) <= WRITE_EN_DELAY_cs(0 to 3+MATRIX_WIDTH+2+7+3-2);
     
     -- Os dados da ultima posição do Registradores Delay "cs" são enviados para saida, onde serão usados.
     ACC_TO_ACT_ADDR <= ACC_ADDRESS_DELAY_cs(3+MATRIX_WIDTH+2-1);
     ACTIVATION_FUNCTION <=ACTIVATION_DELAY_cs(3+MATRIX_WIDTH+2+7-1);
-    SIGNED_NOT_UNSIGNED <= S_NOT_U_DELAY_cs(3+MATRIX_WIDTH+2+7-1);
     ACT_TO_BUF_ADDR <= ACT_TO_BUF_DELAY_cs(3+MATRIX_WIDTH+2+7+3-1);
     BUF_WRITE_EN <= WRITE_EN_DELAY_cs(3+MATRIX_WIDTH+2+7+3-1);
     --< END 
@@ -240,14 +229,12 @@ begin
         COUNT_VAL   => ACT_TO_BUF_ADDR_ns -- Valor da contagem retornado que é o endereço para o UNIFIED BUFFER
     );
     
-    SIGNED_NOT_UNSIGNED_ns <= INSTRUCTION.OP_CODE(4); -- Carrega o sinal que vem da posição 4 do OP_CODE
     ACTIVATION_FUNCTION_ns <= INSTRUCTION.OP_CODE(3 downto 0); -- Carrega o restante da operação no activation_function
     
     -- Se o Activation_Function_cs for "0000" o valor inserido na posicao inicial da FIFO de ativação é "0000" senão é o valor que passou por 6 pipes (ACTIVATION_PIPE2_cs)
-    -- Se o Signed_not_unsigned_cs for "0" então o valor inserido em S_not_U_Delay_ns(0) é "0" senão o valor sera o ultimo do registrador SIGNED_DELAY_cs.
+    -- Se  for "0" então o valor inserido em S_not_U_Delay_ns(0) é "0" senão o valor sera o ultimo do registrador SIGNED_DELAY_cs.
     -- Se o Buf_write_en_cs for "0" então o valor inserido em Write_EN-Delay_ns é "0" senão é o ultimo valor do registrador BUF_WRITE_EN_DELAY_cs.
     ACTIVATION_DELAY_ns(0)  <= "0000" when ACTIVATION_FUNCTION_cs = "0000" else ACTIVATION_PIPE2_cs; -- ACTIVATION_FUNCTION_cs <- ACTIVATION_FUNCTION_ns
-    S_NOT_U_DELAY_ns(0)     <= '0' when SIGNED_NOT_UNSIGNED_cs = '0' else SIGNED_DELAY_cs(2); -- SIGNED_NOT_UNSIGNED_cs  <- SIGNED_NOT_UNSIGNED_ns <-  INSTRUCTION.OP_CODE(4)
     WRITE_EN_DELAY_ns(0)    <= '0' when BUF_WRITE_EN_cs = '0' else BUF_WRITE_EN_DELAY_cs(2); -- BUF_WRITE_EN_DELAY_cs <- BUF_WRITE_EN_DELAY_ns <- BUF_WRITE_EN_cs
 
 
@@ -262,12 +249,11 @@ begin
     
     -- Os dados posteriores são passados para frente na FIFO
     BUF_WRITE_EN_DELAY_ns(1 to 2)   <= BUF_WRITE_EN_DELAY_cs(0 to 1);
-    SIGNED_DELAY_ns(1 to 2)         <= SIGNED_DELAY_cs(0 to 1);
+    --SIGNED_DELAY_ns(1 to 2)         <= SIGNED_DELAY_cs(0 to 1);
     ACTIVATION_PIPE1_ns             <= ACTIVATION_PIPE0_cs;
     ACTIVATION_PIPE2_ns             <= ACTIVATION_PIPE1_cs;
     -- Os novos dados são inseridos em nas posiçoes inicias da suas FIFO
     BUF_WRITE_EN_DELAY_ns(0)        <= BUF_WRITE_EN_cs;
-    SIGNED_DELAY_ns(0)              <= SIGNED_NOT_UNSIGNED_cs;
     ACTIVATION_PIPE0_ns             <= ACTIVATION_FUNCTION_cs;
     
     -- Função para verificar se uma instruçao foi finalizada e o Resource está liberado
@@ -276,11 +262,9 @@ begin
         variable RESOURCE_BUSY_v : std_logic;
     begin
         RESOURCE_BUSY_v := RUNNING_cs; -- Receb o sinal da instrução atual
-        --if RESOURCE_BUSY_v = '1' then
             for i in 0 to 3+MATRIX_WIDTH+2+7+3-1 loop
                 RESOURCE_BUSY_v := RESOURCE_BUSY_v or RUNNING_PIPE_cs(i);
             end loop;
-        --end if;
         RESOURCE_BUSY <= RESOURCE_BUSY_v; -- Atualiza se o Resource está liberado ou nao
     end process RESOURCE;
     
@@ -313,7 +297,7 @@ begin
                 BUF_WRITE_EN_ns_v   := '1'; -- A Flag para escrita no Unified Buffer é ativada
                 LENGTH_LOAD_v       := '1'; -- A Flag para carregamento de um novo valor limite para contagem é ativada (DSP_COUNTER)
                 LENGTH_RESET_v      := '1'; -- A Flag para resetar os registradores do DSP_COUNTER é ativada
-                ACT_LOAD_v          := '1'; -- Ativa o carregamento de valores para ACTIVATION_FUNCTION_cs e SIGNED_NOT_UNSIGNED_cs
+                ACT_LOAD_v          := '1'; -- Ativa o carregamento de valores para ACTIVATION_FUNCTION_cs 
                 ACT_RESET_v         := '0';
             else
                 RUNNING_ns_v        := '0';
@@ -332,7 +316,7 @@ begin
                 LENGTH_LOAD_v       := '0';
                 LENGTH_RESET_v      := '0';
                 ACT_LOAD_v          := '0';
-                ACT_RESET_v         := '1'; -- Reseta os registradores ACTIVATION_FUNCTION_cs e SIGNED_NOT_UNSIGNED_cs
+                ACT_RESET_v         := '1'; -- Reseta os registradores ACTIVATION_FUNCTION_cs 
             else -- Caso nao tenha
                 RUNNING_ns_v        := '1'; -- A instrução nao foi terminada ainda
                 ADDRESS_LOAD_v      := '0';
@@ -364,14 +348,12 @@ begin
                 ACC_TO_ACT_ADDR_cs <= (others => '0');
                 ACT_TO_BUF_ADDR_cs <= (others => '0');
                 BUF_WRITE_EN_DELAY_cs   <= (others => '0');
-                SIGNED_DELAY_cs         <= (others => '0');
                 ACTIVATION_PIPE0_cs     <= (others => '0');
                 ACTIVATION_PIPE1_cs     <= (others => '0');
                 ACTIVATION_PIPE2_cs     <= (others => '0');
                 -- delay register
                 ACC_ADDRESS_DELAY_cs    <= (others => (others => '0'));
                 ACTIVATION_DELAY_cs     <= (others => (others => '0'));
-                S_NOT_U_DELAY_cs        <= (others => '0');
                 ACT_TO_BUF_DELAY_cs     <= (others => (others => '0'));
                 WRITE_EN_DELAY_cs       <= (others => '0');
             else
@@ -397,11 +379,6 @@ begin
                     ACT_TO_BUF_DELAY_cs     <= ACT_TO_BUF_DELAY_ns;
                     -- FIM.
                     
-                    -- INICIO: Caminho para Determinar se o Input ou Output é possui sinal ou não
-                    SIGNED_DELAY_cs         <= SIGNED_DELAY_ns;
-                    S_NOT_U_DELAY_cs        <= S_NOT_U_DELAY_ns;
-                    --FIM.
-                    
                     -- INICIO: Pipeline para O tipo de função de ativação a ser calculada
                     ACTIVATION_PIPE0_cs     <= ACTIVATION_PIPE0_ns;
                     ACTIVATION_PIPE1_cs     <= ACTIVATION_PIPE1_ns;
@@ -414,11 +391,9 @@ begin
             --  Caso o sinal de aviso da contagem ter terminado (DSP_COUNTER) os registradores devem ser zerados
             if ACT_RESET = '1' then
                 ACTIVATION_FUNCTION_cs  <= (others => '0');
-                SIGNED_NOT_UNSIGNED_cs  <= '0';
             else -- Senão continua carregando novos pedidos de função de ativação e se é signed ou nao.
                 if ACT_LOAD = '1' then
                     ACTIVATION_FUNCTION_cs  <= ACTIVATION_FUNCTION_ns;
-                    SIGNED_NOT_UNSIGNED_cs  <= SIGNED_NOT_UNSIGNED_ns;
                 end if;
             end if;
         end if;

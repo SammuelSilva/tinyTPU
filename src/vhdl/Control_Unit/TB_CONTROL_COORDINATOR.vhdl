@@ -53,40 +53,48 @@ architecture BEH of TB_CONTROL_COORDINATOR is
             ACTIVATION_INSTRUCTION      : out INSTRUCTION_TYPE;
             ACTIVATION_INSTRUCTION_EN   : out std_logic;
 
+            LOAD_INT_BUSY                 :  in std_logic;
+            LOAD_INT_RESOURCE_BUSY        :  in std_logic;
+            LOAD_INTERRUPTION_EN          : out std_logic;
+
             SYNCHRONIZE                 : out std_logic
         );
     end component DUT;
     for all : DUT use entity WORK.CONTROL_COORDINATOR(BEH);
     
-    signal CLK, RESET   : std_logic;
-    signal ENABLE       : std_logic;
+    signal CLK, RESET                  : std_logic;
+    signal ENABLE                      : std_logic;
     
-    signal INSTRUCTION      : INSTRUCTION_TYPE;
-    signal INSTRUCTION_EN   : std_logic;
+    signal INSTRUCTION                 : INSTRUCTION_TYPE;
+    signal INSTRUCTION_EN              : std_logic;
     
-    signal BUSY : std_logic;
+    signal BUSY                        : std_logic;
      
-    signal WEIGHT_BUSY              : std_logic; 
-    signal WEIGHT_INSTRUCTION       : WEIGHT_INSTRUCTION_TYPE;
-    signal WEIGHT_INSTRUCTION_EN    : std_logic;
+    signal WEIGHT_BUSY                 : std_logic; 
+    signal WEIGHT_INSTRUCTION          : WEIGHT_INSTRUCTION_TYPE;
+    signal WEIGHT_INSTRUCTION_EN       : std_logic;
      
-    signal MATRIX_BUSY              : std_logic;
-    signal MATRIX_INSTRUCTION       : INSTRUCTION_TYPE;
-    signal MATRIX_INSTRUCTION_EN    : std_logic;
+    signal MATRIX_BUSY                 : std_logic;
+    signal MATRIX_INSTRUCTION          : INSTRUCTION_TYPE;
+    signal MATRIX_INSTRUCTION_EN       : std_logic;
      
-    signal ACTIVATION_BUSY              : std_logic;
-    signal ACTIVATION_INSTRUCTION       : INSTRUCTION_TYPE;
-    signal ACTIVATION_INSTRUCTION_EN    : std_logic;
+    signal ACTIVATION_BUSY             : std_logic;
+    signal ACTIVATION_INSTRUCTION      : INSTRUCTION_TYPE;
+    signal ACTIVATION_INSTRUCTION_EN   : std_logic;
     
-    signal WEIGHT_RESOURCE_BUSY        :   std_logic;
-    signal MATRIX_RESOURCE_BUSY        :   std_logic;
-    signal ACTIVATION_RESOURCE_BUSY    :   std_logic;
+    signal WEIGHT_RESOURCE_BUSY        : std_logic;
+    signal MATRIX_RESOURCE_BUSY        : std_logic;
+    signal ACTIVATION_RESOURCE_BUSY    : std_logic;
     
-    signal SYNCHRONIZE                 :  std_logic;
+    signal LOAD_INT_BUSY               : std_logic;
+    signal LOAD_INT_RESOURCE_BUSY      : std_logic;
+    signal LOAD_INTERRUPTION_EN        : std_logic;
+
+    signal SYNCHRONIZE                 : std_logic;
 
     -- for clock gen
-    constant clock_period   : time := 10 ns;
-    signal stop_the_clock   : boolean;
+    constant clock_period              : time := 10 ns;
+    signal stop_the_clock              : boolean;
 begin
     DUT_i : DUT
     port map(
@@ -108,6 +116,9 @@ begin
         ACTIVATION_RESOURCE_BUSY    => ACTIVATION_RESOURCE_BUSY,
         ACTIVATION_INSTRUCTION      => ACTIVATION_INSTRUCTION,
         ACTIVATION_INSTRUCTION_EN   => ACTIVATION_INSTRUCTION_EN,
+        LOAD_INT_BUSY               => LOAD_INT_BUSY,
+        LOAD_INT_RESOURCE_BUSY      => LOAD_INT_RESOURCE_BUSY,
+        LOAD_INTERRUPTION_EN        => LOAD_INTERRUPTION_EN,
         SYNCHRONIZE                 => SYNCHRONIZE
     );
     
@@ -121,11 +132,43 @@ begin
         WEIGHT_BUSY     <= '0';
         MATRIX_BUSY     <= '0';
         ACTIVATION_BUSY <= '0';
+        LOAD_INT_BUSY   <= '0';
         wait until '1'=CLK and CLK'event;
         RESET           <= '0';
         wait until '1'=CLK and CLK'event;
-        -- Test weight
         ENABLE          <= '1';
+
+        -- Test weight Interruption
+        INSTRUCTION.OP_CODE <= x"FE";
+        INSTRUCTION.CALC_LENGTH <= x"00000000";
+        INSTRUCTION.ACC_ADDRESS <= x"0000";
+        INSTRUCTION_EN  <= '1';
+        WEIGHT_BUSY     <= '0';
+        MATRIX_BUSY     <= '0';
+        ACTIVATION_BUSY <= '0';
+        LOAD_INT_BUSY   <= '0';
+        wait until '1'=CLK and CLK'event;
+        INSTRUCTION_EN  <= '0';
+        wait until '1'=CLK and CLK'event;
+
+        LOAD_INT_BUSY   <= '1';
+        wait until '1'=CLK and CLK'event;
+        wait until '1'=CLK and CLK'event;
+        INSTRUCTION.OP_CODE <= "00001000";
+        INSTRUCTION.CALC_LENGTH <= x"00037100";
+        INSTRUCTION.ACC_ADDRESS <= x"0B31";
+        INSTRUCTION_EN  <= '1';
+        wait until '1'=CLK and CLK'event;
+        INSTRUCTION_EN  <= '0';
+        wait until '1'=CLK and CLK'event;
+        wait until '1'=CLK and CLK'event;
+        wait until '1'=CLK and CLK'event;
+        LOAD_INT_BUSY           <= '0';
+        LOAD_INT_RESOURCE_BUSY  <= '1';
+        wait until '1'=CLK and CLK'event;
+        wait until '1'=CLK and CLK'event;
+        LOAD_INT_RESOURCE_BUSY  <= '0';
+
         -- Test weight
         INSTRUCTION.OP_CODE <= "00001000";
         INSTRUCTION.CALC_LENGTH <= x"00000500";
@@ -134,6 +177,7 @@ begin
         WEIGHT_BUSY     <= '0';
         MATRIX_BUSY     <= '0';
         ACTIVATION_BUSY <= '0';
+        LOAD_INT_BUSY   <= '0';
         wait until '1'=CLK and CLK'event;
         INSTRUCTION_EN  <= '0';
         wait until '1'=CLK and CLK'event;
@@ -176,6 +220,7 @@ begin
         WEIGHT_BUSY     <= '0';
         MATRIX_BUSY     <= '0';
         ACTIVATION_BUSY <= '0';
+        LOAD_INT_BUSY   <= '0';
         wait until '1'=CLK and CLK'event;
         INSTRUCTION_EN  <= '0';
         wait until '1'=CLK and CLK'event;
@@ -216,6 +261,7 @@ begin
         WEIGHT_BUSY     <= '0';
         MATRIX_BUSY     <= '0';
         ACTIVATION_BUSY <= '0';
+        LOAD_INT_BUSY   <= '0';
         wait until '1'=CLK and CLK'event;
         INSTRUCTION_EN  <= '0';
         wait until '1'=CLK and CLK'event;
@@ -256,6 +302,7 @@ begin
         WEIGHT_BUSY     <= '0';
         MATRIX_BUSY     <= '0';
         ACTIVATION_BUSY <= '0';
+        LOAD_INT_BUSY   <= '0';
         wait until '1'=CLK and CLK'event;
         INSTRUCTION.OP_CODE <= "00100000";
         INSTRUCTION.CALC_LENGTH <= x"00000100";

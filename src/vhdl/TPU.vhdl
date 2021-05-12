@@ -32,7 +32,7 @@ library IEEE;
 entity TPU is
     generic(
         MATRIX_WIDTH            : natural := 8; --!< A Largura da MMU e dos barramentos
-        WEIGHT_BUFFER_DEPTH     : natural := 69632; --!< A "profundidade" do Weight Buffer
+        WEIGHT_BUFFER_DEPTH     : natural := 16; --!< A "profundidade" do Weight Buffer
         UNIFIED_BUFFER_DEPTH    : natural := 4096 --!< A "Profundidade" do Unified Buffer
     );  
     port(   
@@ -62,7 +62,8 @@ entity TPU is
         BUFFER_ENABLE           : in  std_logic; --!< Ativador do Host para o unified buffer.
         BUFFER_WRITE_ENABLE     : in  std_logic_vector(0 to MATRIX_WIDTH-1); --!< Ativador do Host para escrita especifica no unified buffer.
         -- Memory synchronization flag for interrupt 
-        SYNCHRONIZE             : out std_logic --!< Synchronization interrupt.
+        SYNCHRONIZE             : out std_logic; --!< Synchronization interrupt.
+        LOAD_INTERRUPTION       : out std_logic
     );
 end entity TPU;
 
@@ -109,7 +110,7 @@ architecture BEH of TPU is
     component TPU_CORE is
         generic(
             MATRIX_WIDTH            : natural := 8;
-            WEIGHT_BUFFER_DEPTH     : natural := 69632;
+            WEIGHT_BUFFER_DEPTH     : natural := 32768;
             UNIFIED_BUFFER_DEPTH    : natural := 4096
         );
         port(
@@ -131,7 +132,8 @@ architecture BEH of TPU is
             INSTRUCTION_ENABLE  : in  std_logic;
             
             BUSY                : out std_logic;
-            SYNCHRONIZE         : out std_logic
+            SYNCHRONIZE         : out std_logic;
+            LOAD_INTERRUPTION   : out std_logic
         );
     end component TPU_CORE;
     for all : TPU_CORE use entity WORK.TPU_CORE(BEH);
@@ -139,7 +141,7 @@ architecture BEH of TPU is
     signal INSTRUCTION_ENABLE   : std_logic;
     signal BUSY                 : std_logic;
     signal SYNCHRONIZE_IN       : std_logic;
-
+    signal LOAD_INTERRUPTION_IN : std_logic;
 begin
     -- Atribui�ao das portas com seus respectivos inputs e outputs
     RUNTIME_COUNTER_i : RUNTIME_COUNTER
@@ -195,11 +197,12 @@ begin
         INSTRUCTION_ENABLE  => INSTRUCTION_ENABLE, -- Entrada resultante do processo INSTRUCTION_FEED
         
         BUSY                => BUSY, -- OUTPUT: Se o Control Cordinator esta ocupado
-        SYNCHRONIZE         => SYNCHRONIZE_IN -- OUTPUT: Se as instru��es est�o sincronizadas
+        SYNCHRONIZE         => SYNCHRONIZE_IN, -- OUTPUT: Se as instru��es est�o sincronizadas
+        LOAD_INTERRUPTION   => LOAD_INTERRUPTION_IN
     );
     
-    SYNCHRONIZE <= SYNCHRONIZE_IN;
-    
+    SYNCHRONIZE       <= SYNCHRONIZE_IN;
+    LOAD_INTERRUPTION <= LOAD_INTERRUPTION_IN;
     -- Verifica se a FIFO esta vazia e n�o h� instru��es sendo executadas para inserir uma nova instru��o na TPU
     INSTRUCTION_FEED:
     process(EMPTY, BUSY) is

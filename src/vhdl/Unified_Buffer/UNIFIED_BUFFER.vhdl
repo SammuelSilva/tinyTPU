@@ -99,21 +99,21 @@ architecture BEH of UNIFIED_BUFFER is
         :=
         -- Test values
         (
-            0  => BYTE_ARRAY_TO_BITS((x"01", x"7E", x"7D", x"7C", x"7B", x"7A", x"79", x"78")),
-            1  => BYTE_ARRAY_TO_BITS((x"71", x"01", x"6F", x"6E", x"6D", x"6C", x"6B", x"6A")),
-            2  => BYTE_ARRAY_TO_BITS((x"63", x"62", x"01", x"60", x"5F", x"5E", x"5D", x"5C")),
-            3  => BYTE_ARRAY_TO_BITS((x"55", x"54", x"53", x"01", x"51", x"50", x"4F", x"4E")),
-            4  => BYTE_ARRAY_TO_BITS((x"47", x"46", x"45", x"44", x"01", x"42", x"41", x"40")),
-            5  => BYTE_ARRAY_TO_BITS((x"39", x"38", x"37", x"36", x"35", x"01", x"33", x"32")),
-            6  => BYTE_ARRAY_TO_BITS((x"2B", x"2A", x"29", x"28", x"27", x"26", x"01", x"24")),
-            7  => BYTE_ARRAY_TO_BITS((x"1D", x"1C", x"1B", x"1A", x"19", x"18", x"17", x"01")),
-            8  => BYTE_ARRAY_TO_BITS((x"0F", x"0E", x"0D", x"0C", x"0B", x"0A", x"09", x"08")),
-            9  => BYTE_ARRAY_TO_BITS((x"01", x"00", x"FF", x"FE", x"FD", x"FC", x"FB", x"FA")),
-            10 => BYTE_ARRAY_TO_BITS((x"F3", x"F2", x"F1", x"F0", x"EF", x"EE", x"ED", x"EC")),
-            11 => BYTE_ARRAY_TO_BITS((x"E5", x"E4", x"E3", x"E2", x"E1", x"E0", x"DF", x"DE")),
-            12 => BYTE_ARRAY_TO_BITS((x"D7", x"D6", x"D5", x"D4", x"D3", x"D2", x"D1", x"D0")),
-            13 => BYTE_ARRAY_TO_BITS((x"C9", x"C8", x"C7", x"C6", x"C5", x"C4", x"C3", x"C2")),
-            14 to TILE_WIDTH_TEST => TRASH_DATA
+            BYTE_ARRAY_TO_BITS((x"7F", x"7E", x"7D", x"7C", x"7B", x"7A", x"79", x"78")),
+            BYTE_ARRAY_TO_BITS((x"71", x"70", x"6F", x"6E", x"6D", x"6C", x"6B", x"6A")),
+            BYTE_ARRAY_TO_BITS((x"63", x"62", x"61", x"60", x"5F", x"5E", x"5D", x"5C")),
+            BYTE_ARRAY_TO_BITS((x"55", x"54", x"53", x"52", x"51", x"50", x"4F", x"4E")),
+            BYTE_ARRAY_TO_BITS((x"47", x"46", x"45", x"44", x"43", x"42", x"41", x"40")),
+            BYTE_ARRAY_TO_BITS((x"39", x"38", x"37", x"36", x"35", x"34", x"33", x"32")),
+            BYTE_ARRAY_TO_BITS((x"2B", x"2A", x"29", x"28", x"27", x"26", x"25", x"24")),
+            BYTE_ARRAY_TO_BITS((x"1D", x"1C", x"1B", x"1A", x"19", x"18", x"17", x"16")),
+            BYTE_ARRAY_TO_BITS((x"0F", x"0E", x"0D", x"0C", x"0B", x"0A", x"09", x"08")),
+            BYTE_ARRAY_TO_BITS((x"01", x"00", x"FF", x"FE", x"FD", x"FC", x"FB", x"FA")),
+            BYTE_ARRAY_TO_BITS((x"F3", x"F2", x"F1", x"F0", x"EF", x"EE", x"ED", x"EC")),
+            BYTE_ARRAY_TO_BITS((x"E5", x"E4", x"E3", x"E2", x"E1", x"E0", x"DF", x"DE")),
+            BYTE_ARRAY_TO_BITS((x"D7", x"D6", x"D5", x"D4", x"D3", x"D2", x"D1", x"D0")),
+            BYTE_ARRAY_TO_BITS((x"C9", x"C8", x"C7", x"C6", x"C5", x"C4", x"C3", x"C2")),
+            others => (others => '0')
         )
     --synthesis translate_on
     ;

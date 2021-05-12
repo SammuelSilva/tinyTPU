@@ -47,7 +47,6 @@ entity MATRIX_MULTIPLY_CONTROL is
         BUF_TO_SDS_ADDR : out BUFFER_ADDRESS_TYPE; --!< Endereço para a leitura no Unified Buffer.
         BUF_READ_EN     : out std_logic; --!< Flag de ativação de leitura para o Unified Buffer.
         MMU_SDS_EN      : out std_logic; --!< Flag de ativação para Matrix Multiply Unit e o Systolic data Setup.
-        MMU_SIGNED      : out std_logic; --!< Determina se o dado é Signed ou Unsigned.
         ACTIVATE_WEIGHT : out std_logic; --!< Flag de ativação para os PreWeights na Matrix Multiply Unit.
         
         ACC_ADDR        : out ACCUMULATOR_ADDRESS_TYPE; --!< Endereço para os Acumuladores (Register File).
@@ -85,7 +84,7 @@ architecture BEH of MATRIX_MULTIPLY_CONTROL is
             COUNT_EVENT : out std_logic--!< O evento, que sera ativado quando o valor final for atingido. 
         );
     end component COUNTER;
-    for all : COUNTER use entity WORK.DSP_COUNTER(BEH);
+    for all : COUNTER use entity WORK.DSP_COUNTER_BUFF_ACC(BEH);
     
     -- O mesmo contador de ACC_LOAD_COUNTER porem este so pode ser resetado atraves do LOAD.
     component LOAD_COUNTER is
@@ -103,7 +102,7 @@ architecture BEH of MATRIX_MULTIPLY_CONTROL is
             COUNT_VAL   : out std_logic_vector(COUNTER_WIDTH-1 downto 0) --!< O valor atual do contador.
         );
     end component LOAD_COUNTER;
-    for all : LOAD_COUNTER use entity WORK.DSP_LOAD_COUNTER(BEH);
+    for all : LOAD_COUNTER use entity WORK.DSP_LOAD_COUNTER_BUFF_ACC(BEH);
     
     -- Registrador do Flag de ativação de leitura para o Unified Buffer.
     signal BUF_READ_EN_cs   : std_logic := '0';
@@ -116,14 +115,6 @@ architecture BEH of MATRIX_MULTIPLY_CONTROL is
     -- Registrador para realizar um Delay nos dados para a Flag de ativação para Matrix Multiply Unit e o Systolic data Setup.
     signal MMU_SDS_DELAY_cs : std_logic_vector(0 to 2) := (others => '0');
     signal MMU_SDS_DELAY_ns : std_logic_vector(0 to 2);
-    
-    -- Registrador para determinar se o dado é Signed ou Unsigned.
-    signal MMU_SIGNED_cs    : std_logic := '0';
-    signal MMU_SIGNED_ns    : std_logic;
-    
-    -- ?????
-    signal SIGNED_PIPE_cs   : std_logic_vector(0 to 2) := (others => '0');
-    signal SIGNED_PIPE_ns   : std_logic_vector(0 to 2);
     
     -- WEIGHT_COUNTER_WIDTH é um valor natural maior que o log2 da MATRIX_WIDTH-1 (Caso MATRIX_WIDHT-1 = 13, então o valor é 4)
     constant WEIGHT_COUNTER_WIDTH   : natural := natural(ceil(log2(real(MATRIX_WIDTH-1))));
@@ -266,7 +257,6 @@ begin
     MMU_SDS_EN_PIPE_ns(1 to 2)  <= MMU_SDS_EN_PIPE_cs(0 to 1);
     ACC_EN_PIPE_ns(1 to 2)      <= ACC_EN_PIPE_cs(0 to 1);
     ACCUMULATE_PIPE_ns(1 to 2)  <= ACCUMULATE_PIPE_cs(0 to 1);
-    SIGNED_PIPE_ns(1 to 2)      <= SIGNED_PIPE_cs(0 to 1);
     WEIGHT_PIPE_ns(1 to 2)      <= WEIGHT_PIPE_cs(0 to 1);
     
     -- Inserção de novos valores na FIFO
@@ -274,11 +264,8 @@ begin
     MMU_SDS_EN_PIPE_ns(0)  <= MMU_SDS_EN_cs; -- Flag de ativação para Matrix Multiply Unit e o Systolic data Setup.
     ACC_EN_PIPE_ns(0)      <= ACC_ENABLE_cs; -- Flag de ativação para acumuladores.
     ACCUMULATE_PIPE_ns(0)  <= ACCUMULATE_cs; -- Determina se um dado deve ser acumulado ou sobreescrito.
-    SIGNED_PIPE_ns(0)      <= MMU_SIGNED_cs; --  Determina se o dado é Signed ou Unsigned.
     WEIGHT_PIPE_ns(0)      <= '1' when WEIGHT_COUNTER_cs = std_logic_vector(to_unsigned(0, WEIGHT_COUNTER_WIDTH)) else '0'; --  Flag de ativação para os PreWeights na Matrix Multiply Unit.
-    
-    MMU_SIGNED_ns <= INSTRUCTION.OP_CODE(0); -- Recebeo Sinal do Dado (Signed ou Unsigned)
-    
+        
     -- Carrega o endereço a ser lido do unified buffer (Se tiver instrução ativa)
     BUF_READ_EN             <= '0' when BUF_READ_EN_cs = '0' else BUF_READ_PIPE_cs(2);
 
@@ -288,7 +275,6 @@ begin
     ACCUMULATE_DELAY_ns(0)  <= '0' when ACCUMULATE_cs = '0' else ACCUMULATE_PIPE_cs(2);
 
     -- Caso instruções estiverem sendo feitas carrega o sinal da instrução - INSTRUCTION.OP_CODE(0) -
-    MMU_SIGNED <= '0' when MMU_SDS_DELAY_cs(2) = '0' else SIGNED_PIPE_cs(2);
     
     ACTIVATE_WEIGHT_DELAY_ns(0) <= WEIGHT_PIPE_cs(2); -- Carregamento da flag de ativação para os PreWeights nos registratores de DELAY
     -- FIFO DO ACTIVATE_WEIGHT_DELAY
@@ -437,7 +423,6 @@ begin
                 ACCUMULATE_DELAY_cs <= (others => '0');
                 ACC_EN_DELAY_cs     <= (others => '0');
                 MMU_SDS_DELAY_cs    <= (others => '0');
-                SIGNED_PIPE_cs      <= (others => '0');
                 WEIGHT_PIPE_cs      <= (others => '0');
                 ACTIVATE_WEIGHT_DELAY_cs <= (others => '0');
             else
@@ -453,7 +438,6 @@ begin
                     ACCUMULATE_DELAY_cs <= ACCUMULATE_DELAY_ns;
                     ACC_EN_DELAY_cs     <= ACC_EN_DELAY_ns;
                     MMU_SDS_DELAY_cs    <= MMU_SDS_DELAY_ns;
-                    SIGNED_PIPE_cs      <= SIGNED_PIPE_ns;
                     WEIGHT_PIPE_cs      <= WEIGHT_PIPE_ns;
                     ACTIVATE_WEIGHT_DELAY_cs <= ACTIVATE_WEIGHT_DELAY_ns;
                 end if;
@@ -465,11 +449,9 @@ begin
                 MMU_SDS_EN_PIPE_cs  <= (others => '0');
                 ACC_EN_PIPE_cs      <= (others => '0');
                 ACCUMULATE_PIPE_cs  <= (others => '0');
-                MMU_SIGNED_cs       <= '0';
             else
                 if ACC_LOAD = '1' then -- Carrega os valores dos dados(Acumular/Sobrescrever e Signed/Unsigned)
                     ACCUMULATE_cs   <= ACCUMULATE_ns;
-                    MMU_SIGNED_cs   <= MMU_SIGNED_ns;
                 end if;
                 
                 if ENABLE = '1' then -- Permite o trafego dos dados pelos pipes

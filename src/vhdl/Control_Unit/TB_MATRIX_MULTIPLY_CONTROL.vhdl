@@ -30,7 +30,7 @@ end entity TB_MATRIX_MULTIPLY_CONTROL;
 architecture BEH of TB_MATRIX_MULTIPLY_CONTROL is
     component DUT is
         generic(
-            MATRIX_WIDTH    : natural := 14
+            MATRIX_WIDTH    : natural := 8
         );
         port(
             CLK, RESET      :  in std_logic;
@@ -42,7 +42,7 @@ architecture BEH of TB_MATRIX_MULTIPLY_CONTROL is
             BUF_TO_SDS_ADDR : out BUFFER_ADDRESS_TYPE;
             BUF_READ_EN     : out std_logic;
             MMU_SDS_EN      : out std_logic;
-            MMU_SIGNED      : out std_logic;
+            --MMU_SIGNED      : out std_logic;
             ACTIVATE_WEIGHT : out std_logic;
             
             ACC_ADDR        : out ACCUMULATOR_ADDRESS_TYPE;
@@ -86,7 +86,7 @@ begin
         BUF_TO_SDS_ADDR => BUF_TO_SDS_ADDR,
         BUF_READ_EN => BUF_READ_EN,
         MMU_SDS_EN => MMU_SDS_EN,
-        MMU_SIGNED => MMU_SIGNED,
+        --MMU_SIGNED => MMU_SIGNED,
         ACTIVATE_WEIGHT => ACTIVATE_WEIGHT,
         ACC_ADDR => ACC_ADDR,
         ACCUMULATE => ACCUMULATE,
@@ -119,7 +119,7 @@ begin
         INSTRUCTION_EN <= '0';
         wait until BUSY = '0';
         INSTRUCTION.OP_CODE <= "00100000"; -- matrix multiply
-        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(14, LENGTH_WIDTH));
+        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(8, LENGTH_WIDTH));
         INSTRUCTION.ACC_ADDRESS <= x"0006";
         INSTRUCTION.BUFFER_ADDRESS <= x"0000AB";
         INSTRUCTION_EN <= '1';

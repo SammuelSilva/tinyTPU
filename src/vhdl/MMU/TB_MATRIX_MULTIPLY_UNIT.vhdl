@@ -30,8 +30,8 @@ end entity TB_MATRIX_MULTIPLY_UNIT;
 architecture BEH of TB_MATRIX_MULTIPLY_UNIT is
     component DUT is
         generic(
-        MATRIX_WIDTH    : natural := 14;
-        MATRIX_HALF     : natural := ((14-1)/NUMBER_OF_MULT)
+        MATRIX_WIDTH    : natural := 8;
+        MATRIX_HALF     : natural := ((8-1)/NUMBER_OF_MULT)
         );
         port(
             CLK, RESET      : in  std_logic;
@@ -39,9 +39,7 @@ architecture BEH of TB_MATRIX_MULTIPLY_UNIT is
             
             WEIGHT_DATA0     : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
             WEIGHT_DATA1     : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
-            WEIGHT_SIGNED   : in  std_logic;
             SYSTOLIC_DATA   : in  BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
-            SYSTOLIC_SIGNED : in  std_logic;
             
             ACTIVATE_WEIGHT : in  std_logic; -- Activates the loaded weights sequentially
             LOAD_WEIGHT     : in  std_logic; -- Preloads one column of weights with WEIGHT_DATA
@@ -52,17 +50,15 @@ architecture BEH of TB_MATRIX_MULTIPLY_UNIT is
     end component DUT;
     for all : DUT use entity WORK.MATRIX_MULTIPLY_UNIT(BEH);
     
-    constant MATRIX_WIDTH   : natural := 14;
-    constant MATRIX_HALF             : natural := ((14-1)/NUMBER_OF_MULT);
+    constant MATRIX_WIDTH   : natural := 8;
+    constant MATRIX_HALF             : natural := ((8-1)/NUMBER_OF_MULT);
 
     signal CLK, RESET       : std_logic;
     signal ENABLE           : std_logic;
     
     signal WEIGHT_DATA0      : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
     signal WEIGHT_DATA1      : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1);
-    signal WEIGHT_SIGNED    : std_logic;
     signal SYSTOLIC_DATA    : BYTE_ARRAY_TYPE(0 to MATRIX_WIDTH-1) := (others => (others => '0'));
-    signal SYSTOLIC_SIGNED  : std_logic;
     
     signal ACTIVATE_WEIGHT  : std_logic;
     signal LOAD_WEIGHT      : std_logic;
@@ -100,22 +96,25 @@ architecture BEH of TB_MATRIX_MULTIPLY_UNIT is
 
     constant INPUT_MATRIX_IV  : INTEGER_ARRAY_2D_TYPE :=
         (
-            (6,41,110,96,18,101,65),
-            (7,40,91,28,112,31,71),
-            (10,13,67,3,68,38,99),
-            (67,73,-1,11,88,102,4),
-            (103,85,6,43,21,30,35),
-            (2,36,4,9,63,0,11),
-            (95,56,92,16,49,114,18)
+            ( 57 , 50 ,55 ,65 , 53 ,104 , 56),
+            (  2 ,111 ,23 ,14 ,106 , 10 , 60),
+            (  1 , 16 ,91 ,31 , 15 , 22 ,  8),
+            ( 83 , 17 ,62 ,86 ,  6 ,  2 , 56),
+            ( 34 , 39 ,68 ,53 , 54 , 62 , 28),
+            (126 , 94 ,94 ,36 , 15 , 68 ,118),
+            (  1 , 24 ,60 ,39 , 17 , 26 , 79)
         );
         
     constant INPUT_MATRIX_I   : INTEGER_ARRAY_2D_TYPE :=
         (
-            ( 40,  76,  19, 192, 0),
-            (  3,  84,  12,   8, 1),
-            ( 54,  18, 255, 120, 0),
-            ( 30,  84, 122,   2, 1),
-            (  0,   1,   1,   1, 1)
+            (65 ,123 , 89 ,  2 , 12 , 15 ,  4 , 70),
+            (31 ,108 ,  3 , 75 , 98 , 79 , 36 ,  1),
+            (77 ,105 , 83 ,  9 , 28 , 22 ,  1 , 56),
+            (77 , 30 , 14 ,118 ,117 ,  7 ,124 ,  0),
+            (11 , 15 ,112 , 13 ,114 ,118 ,105 ,  3),
+           (117 , 56 ,  8 , 86 , 73 ,105 , 20 , 67),
+            (58 , 14 , 62 , 11 , 53 , 73 , 33 , 71),
+           (120 , 55 , 14 , 34 , 91 , 77 , 87 ,102)
         );
 
     constant INPUT_MATRIX_II   : INTEGER_ARRAY_2D_TYPE :=
@@ -140,32 +139,38 @@ architecture BEH of TB_MATRIX_MULTIPLY_UNIT is
     -- Tested weight data
     constant WEIGHT_MATRIX  : INTEGER_ARRAY_2D_TYPE :=
         (
-            ( 13,  0, 178,   9, 0),
-            ( 84,  0, 245,  18, 1),
-            (255,  0,  14,   3, 1),
-            ( 98,  0,  78,  29, 1),
-            (  1,  0,   1,   1, 1)
+            ( 10 ,112 ,110 , 46 , 56 , 61 , 51 ,29),
+            ( 79 , 51 , 42 , 73 , 27 , 62 , 90 ,65),
+            (126 , 58 , 97 , 83 ,118 ,106 , 86 ,22),
+            ( 18 ,  6 , 81 ,103 , 28 , 35 , 97 ,70),
+            (116 , 14 , 63 , 12 , 40 , 37 ,  2 , 1),
+            (121 ,  5 , 28 ,119 , 48 , 64 ,101 ,61),
+            ( 63 ,115 , 61 , 38 ,  4 , 37 ,126 ,17),
+            (124 , 45 , 33 , 73 ,113 ,110 ,109 ,65)
 
         );
 
     constant WEIGHT_MATRIX_IV : INTEGER_ARRAY_2D_TYPE :=
         (
-            (-70,20,89,-62,94,-39,22),
-            (-114,88,-64,-13,34,111,-116),
-            (-16,88,115,65,3,-108,47),
-            (62,-116,-63,52,125,50,-21),
-            (-102,94,66,14,-34,83,-1),
-            (-97,120,96,47,4,-77,65),
-            (-96,-100,-51,-124,-10,-18,50)
+            ( 72 ,92 ,102 ,125 ,  4 , 55 ,117),
+            ( 32 ,57 , 81 , 55 , 38 ,123 ,117),
+            (104 ,73 , 98 ,114 , 28 ,110 , 53),
+            ( 56 ,38 , 67 ,112 , 35 , 48 , 24),
+            (111 ,40 , 77 ,122 , 55 , 77 , 70),
+            ( 11 ,90 , 61 ,  7 , 27 ,104 , 26),
+            ( 36 ,94 ,100 , 61 ,110 , 35 ,  9)
         );
     -- Result of matrix multiply
     constant RESULT_MATRIX_I  : INTEGER_ARRAY_2D_TYPE :=
         (
-            (30565,  0, 40982, 7353, 287),
-            (10940,  0, 21907, 1808, 105),
-            (78999,  0, 26952, 5055, 393),
-            (38753,  0, 27785, 2207, 209),
-            (  438,  0,   338,   51,   4)
+            (33756,22580,24841,26753,26645,30347,31906,17523),
+            (33889,15556,24927,29302,15075,21654,31654,18829),
+            (32602,21984,25949,26103,25701,28961,29896,16541),
+            (29259,27607,35777,25997,15590,21536,35842,15403),
+            (50130,22967,30747,31855,25584,29913,38507,13960),
+            (38891,23802,33934,38014,27027,31998,40611,24402),
+            (35560,18969,23612,25729,25029,27027,29993,14408),
+            (45923,33515,36184,35206,30019,36138,45611,22640)
         );
 
     constant RESULT_MATRIX_II  : INTEGER_ARRAY_2D_TYPE :=
@@ -188,13 +193,13 @@ architecture BEH of TB_MATRIX_MULTIPLY_UNIT is
 
     constant RESULT_MATRIX_IV : INTEGER_ARRAY_2D_TYPE :=
         (
-            (-18775,  9584, 12081,  8176, 13430, -10216,  8327),
-            (-26017, 15568, 13511,   638,  1397,   1370,  4656),
-            (-23194,  7944, 10661, -5816, -1192,  -5097,  9150),
-            (-31568, 26512, 15879,   934,  7528,   5526,  -530),
-            (-22742,  7154,  4189, -7501, 17021,   5723, -4536),
-            (-11232,  7338,  1364,  -346,   297,   8967, -3646),
-            (-31298, 29554, 27703,  4006, 11720, -11660,  7843)          
+            (21948,25703,35570,26635,18878,17932,33213),
+            (23491,26010,35018,21124,15169,19552,33761),
+            (30499,29513,38809,28135,19467,24524,35323),
+            (19893,16447,25327,20400,11691,13960,20764),
+            (28252,24359,36774,29071,17325,24348,32220),
+            (15497,23088,21832,10657,14540,12822,21978),
+            (15562,22667,28334,19443,20356,16440,19793)        
         );
 
         constant RESULT_MATRIX_V : INTEGER_ARRAY_2D_TYPE :=
@@ -284,9 +289,7 @@ begin
         ENABLE          => ENABLE,
         WEIGHT_DATA0    => WEIGHT_DATA0,
         WEIGHT_DATA1    => WEIGHT_DATA1,
-        WEIGHT_SIGNED   => WEIGHT_SIGNED,
         SYSTOLIC_DATA   => SYSTOLIC_DATA,
-        SYSTOLIC_SIGNED => SYSTOLIC_SIGNED,
         ACTIVATE_WEIGHT => ACTIVATE_WEIGHT,
         LOAD_WEIGHT     => LOAD_WEIGHT,
         WEIGHT_ADDRESS  => WEIGHT_ADDRESS,
@@ -309,14 +312,12 @@ begin
             ACTIVATE_WEIGHT <= '0';
             LOAD_WEIGHT <= '0';
             WEIGHT_ADDRESS <= (others => '0');
-            WEIGHT_SIGNED <= '0';
             wait until '1'=CLK and CLK'event;
 
             -- RESET
             RESET <= '1';
             wait until '1'=CLK and CLk'event;
             RESET <= '0';
-            WEIGHT_SIGNED <= SIGNED_NOT_UNSIGNED;
 
             for k in 0 to (MATRIX_WIDTH-1)/2 loop
                 WEIGHT_ADDRESS <= std_logic_vector(to_unsigned(k, BYTE_WIDTH));
@@ -332,7 +333,6 @@ begin
             end loop;
             --
             LOAD_WEIGHT <= '0';
-            WEIGHT_SIGNED <= '0';
             ACTIVATE_WEIGHT <= '1';
             ENABLE <= '1';
             --
@@ -351,22 +351,22 @@ begin
             end loop;
         end procedure START_TEST;
     begin
-       -- CURRENT_SIGN <= '1';
+        --CURRENT_SIGN <= '1';
         --CURRENT_INPUT <= INPUT_MATRIX_IV;
         --CURRENT_RESULT <= RESULT_MATRIX_IV;
         --LOAD_WEIGHTS(WEIGHT_MATRIX_IV, '1');
         --START_TEST;
-        CURRENT_SIGN <= '1';
-        CURRENT_INPUT <= INPUT_MATRIX_V;
-        CURRENT_RESULT <= RESULT_MATRIX_V;
-        LOAD_WEIGHTS(WEIGHT_MATRIX_V, '1');
-        START_TEST;
+        --CURRENT_SIGN <= '1';
+        --CURRENT_INPUT <= INPUT_MATRIX_V;
+        --CURRENT_RESULT <= RESULT_MATRIX_V;
+        --LOAD_WEIGHTS(WEIGHT_MATRIX_V, '1');
+        --START_TEST;
      -- QUIT_CLOCK0 <= false;
      -- CURRENT_SIGN <= '0';
-     -- CURRENT_INPUT <= INPUT_MATRIX_I;
-     -- CURRENT_RESULT <= RESULT_MATRIX_I;
-     -- LOAD_WEIGHTS(WEIGHT_MATRIX,  '0');
-     -- START_TEST;
+         CURRENT_INPUT <= INPUT_MATRIX_I;
+         CURRENT_RESULT <= RESULT_MATRIX_I;
+         LOAD_WEIGHTS(WEIGHT_MATRIX,  '0');
+         START_TEST;
      -- CURRENT_SIGN <= '0';
      -- CURRENT_INPUT <= INPUT_MATRIX_II;
      -- CURRENT_RESULT <= RESULT_MATRIX_II;
@@ -440,9 +440,7 @@ begin
     PROCESS_INPUT4:
     process is
     begin
-        SYSTOLIC_SIGNED <= '0';
         wait until START = true;
-        SYSTOLIC_SIGNED <= CURRENT_SIGN;
         wait until '1'=CLK and CLK'event;
         wait until '1'=CLK and CLK'event;
         for i in 0 to MATRIX_WIDTH-1 loop
@@ -493,102 +491,6 @@ begin
         SYSTOLIC_DATA(7) <= (others => '0');
     end process;
 
-    PROCESS_INPUT8:
-    process is
-    begin
-        wait until START = true;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        for i in 0 to MATRIX_WIDTH-1 loop
-            SYSTOLIC_DATA(8) <= std_logic_vector(to_signed(CURRENT_INPUT(i, 8), BYTE_WIDTH));
-            wait until '1'=CLK and CLK'event;
-        end loop;
-        SYSTOLIC_DATA(8) <= (others => '0');
-    end process;
-
-    PROCESS_INPUT9:
-    process is
-    begin
-        wait until START = true;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        for i in 0 to MATRIX_WIDTH-1 loop
-            SYSTOLIC_DATA(9) <= std_logic_vector(to_signed(CURRENT_INPUT(i, 9), BYTE_WIDTH));
-            wait until '1'=CLK and CLK'event;
-        end loop;
-        SYSTOLIC_DATA(9) <= (others => '0');
-    end process;
-
-    PROCESS_INPUT10:
-    process is
-    begin
-        wait until START = true;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        for i in 0 to MATRIX_WIDTH-1 loop
-            SYSTOLIC_DATA(10) <= std_logic_vector(to_signed(CURRENT_INPUT(i, 10), BYTE_WIDTH));
-            wait until '1'=CLK and CLK'event;
-        end loop;
-        SYSTOLIC_DATA(10) <= (others => '0');
-    end process;
-
-    PROCESS_INPUT11:
-    process is
-    begin
-        wait until START = true;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        for i in 0 to MATRIX_WIDTH-1 loop
-            SYSTOLIC_DATA(11) <= std_logic_vector(to_signed(CURRENT_INPUT(i, 11), BYTE_WIDTH));
-            wait until '1'=CLK and CLK'event;
-        end loop;
-        SYSTOLIC_DATA(11) <= (others => '0');
-    end process;
-    
-    PROCESS_INPUT12:
-    process is
-    begin
-        wait until START = true;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        for i in 0 to MATRIX_WIDTH-1 loop
-            SYSTOLIC_DATA(12) <= std_logic_vector(to_signed(CURRENT_INPUT(i, 12), BYTE_WIDTH));
-            wait until '1'=CLK and CLK'event;
-        end loop;
-        SYSTOLIC_DATA(12) <= (others => '0');
-    end process;
-
-    PROCESS_INPUT13:
-    process is
-    begin
-        wait until START = true;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        wait until '1'=CLK and CLK'event;
-        for i in 0 to MATRIX_WIDTH-1 loop
-            SYSTOLIC_DATA(13) <= std_logic_vector(to_signed(CURRENT_INPUT(i, 13), BYTE_WIDTH));
-            wait until '1'=CLK and CLK'event;
-        end loop;
-        SYSTOLIC_DATA(13) <= (others => '0');
-    end process;
-
     EVALUATE_RESULT:
     process is
     begin
@@ -628,12 +530,6 @@ begin
 
             if RESULT_DATA(5) /= std_logic_vector(to_signed(CURRENT_RESULT(i, 5), 4*BYTE_WIDTH)) then
                 report "Test failed! Result should be 5" severity WARNING;
-                QUIT_CLOCK1 <= false;
-                wait;
-            end if;
-
-            if RESULT_DATA(6) /= std_logic_vector(to_signed(CURRENT_RESULT(i, 6), 4*BYTE_WIDTH)) then
-                report "Test failed! Result should be 6" severity WARNING;
                 QUIT_CLOCK1 <= false;
                 wait;
             end if;

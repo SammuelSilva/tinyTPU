@@ -30,7 +30,8 @@ end entity TB_TPU_CORE;
 architecture BEH of TB_TPU_CORE is
     component DUT is
         generic(
-            MATRIX_WIDTH        : natural := 14
+            MATRIX_WIDTH        : natural := 8;
+            WEIGHT_BUFFER_DEPTH : natural := 32768
         );
         port(
             CLK, RESET          : in  std_logic;
@@ -51,7 +52,8 @@ architecture BEH of TB_TPU_CORE is
             INSTRUCTION_ENABLE  : in  std_logic;
             
             BUSY                : out std_logic;
-            SYNCHRONIZE         : out std_logic
+            SYNCHRONIZE         : out std_logic;
+            LOAD_INTERRUPTION   : out std_logic
         );
     end component DUT;
     for all : DUT use entity WORK.TPU_CORE(BEH);
@@ -63,14 +65,15 @@ architecture BEH of TB_TPU_CORE is
     signal INSTRUCTION_ENABLE   : std_logic;
     signal BUSY                 : std_logic;
     signal SYNCHRONIZE          : std_logic;
-    
+    signal LOAD_INTERRUPTION    : std_logic;
+
     -- for clock gen
     constant clock_period   : time := 10 ns;
     signal stop_the_clock   : boolean := false;
 begin
     DUT_i : DUT
     generic map(
-        MATRIX_WIDTH => 14
+        MATRIX_WIDTH => 8
     )
     port map(
         CLK => CLK,
@@ -90,7 +93,8 @@ begin
         BUFFER_WRITE_ENABLE => (others => '0'),
         
         BUSY => BUSY,
-        SYNCHRONIZE => SYNCHRONIZE
+        SYNCHRONIZE => SYNCHRONIZE,
+        LOAD_INTERRUPTION => LOAD_INTERRUPTION
     );
     
     STIMULUS:
@@ -106,6 +110,16 @@ begin
         RESET <= '0';
         wait until '1'=CLK and CLK'event;
         ENABLE <= '1';
+
+        INSTRUCTION_PORT.OP_CODE <= x"FE"; -- Load Interrupt
+        INSTRUCTION_PORT.CALC_LENGTH <= std_logic_vector(to_unsigned(0, LENGTH_WIDTH));
+        INSTRUCTION_PORT.BUFFER_ADDRESS <= x"000000";
+        INSTRUCTION_PORT.ACC_ADDRESS <= x"0000";
+
+        INSTRUCTION_ENABLE <= '1';
+        wait until '1'=CLK and CLK'event;
+        wait until BUSY = '0';
+
         INSTRUCTION_PORT.OP_CODE <= "00001001"; -- load weight
         INSTRUCTION_PORT.CALC_LENGTH <= std_logic_vector(to_unsigned(8, LENGTH_WIDTH));
         INSTRUCTION_PORT.BUFFER_ADDRESS <= x"000000";

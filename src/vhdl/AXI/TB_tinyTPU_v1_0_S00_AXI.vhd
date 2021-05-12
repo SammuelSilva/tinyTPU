@@ -234,51 +234,49 @@ begin
         wait until CLK='1' and CLK'event;
         NRESET <= '1';
         wait until CLK='1' and CLK'event;
+
         -- Weight buffer write test
-        WRITE_PROCEDURE(x"00000", x"AFFEDEAD", "1111"); -- Base address
-        WRITE_PROCEDURE(x"00004", x"DEADAFFE", "1111");
-        WRITE_PROCEDURE(x"00008", x"12345678", "1111");
-        WRITE_PROCEDURE(x"0000C", x"0000B00B", "1111");
-        WRITE_PROCEDURE(x"00958", x"12345678", "1111");
-        WRITE_PROCEDURE(x"7FFFC", x"0000B00B", "1111"); -- End address
+        WRITE_PROCEDURE(x"00000", x"AFFEDEAD", "1111"); -- Base address 
+        WRITE_PROCEDURE(x"00004", x"DEADAFFE", "1111"); -- 0 
+        WRITE_PROCEDURE(x"00008", x"12345678", "1111"); -- 1
+        WRITE_PROCEDURE(x"0000C", x"0000B00B", "1111"); -- 1
+        WRITE_PROCEDURE(x"00010", x"12345678", "1111"); -- 2
+        WRITE_PROCEDURE(x"00014", x"0000B00B", "1111"); -- 2
+        WRITE_PROCEDURE(x"00018", x"DE00B00B", "1111"); -- 3
+        WRITE_PROCEDURE(x"0001C", x"DEAD0000", "1111"); -- 3
+        WRITE_PROCEDURE(x"00020", x"DAD00000", "1111"); -- 4
+        WRITE_PROCEDURE(x"00024", x"32568986", "1111"); -- 4
+        WRITE_PROCEDURE(x"00028", x"21081996", "1111"); -- 5
+        WRITE_PROCEDURE(x"0002C", x"FF2FF1FF", "1111"); -- 5
+        WRITE_PROCEDURE(x"00030", x"00000000", "1111"); -- 6 
+        WRITE_PROCEDURE(x"00034", x"B000000B", "1111"); -- 6
+        WRITE_PROCEDURE(x"00038", x"BABA1235", "1111"); -- 7
+        WRITE_PROCEDURE(x"0003C", x"72354896", "1111"); -- 7
+        WRITE_PROCEDURE(x"00040", x"32105052", "1111"); -- 8
+        WRITE_PROCEDURE(x"00044", x"D0DEDFDA", "1111"); -- 8
+        WRITE_PROCEDURE(x"00048", x"14785236", "1111"); -- 9
+        WRITE_PROCEDURE(x"0004C", x"98756321", "1111"); -- 9
+        WRITE_PROCEDURE(x"00050", x"20315487", "1111"); -- 10
+        WRITE_PROCEDURE(x"00054", x"AAAAAAAA", "1111"); -- 10
+        WRITE_PROCEDURE(x"00058", x"CCCCCCCC", "1111"); -- 11
+        WRITE_PROCEDURE(x"0005C", x"CACACACA", "1111"); -- 11
+        WRITE_PROCEDURE(x"00060", x"BABABABA", "1111"); -- 12
+        WRITE_PROCEDURE(x"00064", x"0BABACA0", "1111"); -- 12
+        WRITE_PROCEDURE(x"00068", x"78945666", "1111"); -- 13
+        WRITE_PROCEDURE(x"0006C", x"12345678", "1111"); -- 13
+        WRITE_PROCEDURE(x"00070", x"03164978", "1111"); -- 14
+        WRITE_PROCEDURE(x"00074", x"BABAB00B", "1111"); -- 14
+        WRITE_PROCEDURE(x"00078", x"00000000", "1111"); -- 15
+        WRITE_PROCEDURE(x"0007C", x"0BABACA0", "1111"); -- 15 End address
+
         -- Unified buffer write test
-        WRITE_PROCEDURE(x"80000", x"AFFEDEAD", "1111"); -- Base address
-        WRITE_PROCEDURE(x"80004", x"DEADAFFE", "1111");
-        WRITE_PROCEDURE(x"80008", x"12345678", "1111");
-        WRITE_PROCEDURE(x"8000C", x"0000B00B", "1111");
-        WRITE_PROCEDURE(x"80958", x"12345678", "1111");
-        WRITE_PROCEDURE(x"8FFFC", x"0000B00B", "1111"); -- End address
-        -- Instruction fifo write test
-        WRITE_PROCEDURE(x"90000", x"AFFEDEAD", "1111"); -- Base address, shouldn't do anything
-        
-        INSTRUCTION.OP_CODE := "00001000"; -- load weight
-        INSTRUCTION.CALC_LENGTH := std_logic_vector(to_unsigned(14, LENGTH_WIDTH));
-        INSTRUCTION.BUFFER_ADDRESS := x"000000";
-        INSTRUCTION.ACC_ADDRESS := x"0000";
-        
-        WRITE_PROCEDURE(x"90004", INSTRUCTION_TO_BITS(INSTRUCTION)(1*4*BYTE_WIDTH-1 downto 0*4*BYTE_WIDTH), "1111"); -- Write lower instruction word
-        WRITE_PROCEDURE(x"90008", INSTRUCTION_TO_BITS(INSTRUCTION)(2*4*BYTE_WIDTH-1 downto 1*4*BYTE_WIDTH), "1111"); -- Write middle instruction word
-        WRITE_PROCEDURE(x"9000C", x"0000" & INSTRUCTION_TO_BITS(INSTRUCTION)(2*4*BYTE_WIDTH + 2*BYTE_WIDTH-1 downto 2*4*BYTE_WIDTH), "1111"); -- Write upper instruction word
-        
-        -- Weight buffer read test - shouldn't do anything
-        READ_PROCEDURE(x"00000");
-        READ_PROCEDURE(x"00004");
-        READ_PROCEDURE(x"00008");
-        READ_PROCEDURE(x"0000C");
-        READ_PROCEDURE(x"00958");
-        READ_PROCEDURE(x"7FFFC");
-        -- Unified buffer read test
-        READ_PROCEDURE(x"80000");
-        READ_PROCEDURE(x"80004");
-        READ_PROCEDURE(x"80008");
-        READ_PROCEDURE(x"8000C");
-        READ_PROCEDURE(x"80958");
-        READ_PROCEDURE(x"8FFFC");
-        -- Instruction fifo read test
-        READ_PROCEDURE(x"90000"); -- should be TPU max index
-        READ_PROCEDURE(x"90004"); -- shouldn't do anything
-        READ_PROCEDURE(x"90008"); -- shouldn't do anything
-        READ_PROCEDURE(x"9000C"); -- shouldn't do anything
+        WRITE_PROCEDURE(x"80000", x"00000000", "1111"); -- Base address
+        --WRITE_PROCEDURE(x"80004", x"DEADAFFE", "1111");
+        --WRITE_PROCEDURE(x"80008", x"12345678", "1111");
+        --WRITE_PROCEDURE(x"8000C", x"0000B00B", "1111");
+        --WRITE_PROCEDURE(x"80958", x"12345678", "1111");
+        --WRITE_PROCEDURE(x"10FFF", x"0000B00B", "1111"); -- End address
+ 
         wait;
     end process STIMULUS;
     

@@ -38,7 +38,7 @@ architecture BEH of TB_ACTIVATION_CONTROL is
             
             ACC_TO_ACT_ADDR     : out ACCUMULATOR_ADDRESS_TYPE;
             ACTIVATION_FUNCTION : out ACTIVATION_BIT_TYPE;
-            SIGNED_NOT_UNSIGNED : out std_logic;
+            --SIGNED_NOT_UNSIGNED : out std_logic;
             
             ACT_TO_BUF_ADDR     : out BUFFER_ADDRESS_TYPE;
             BUF_WRITE_EN        : out std_logic;
@@ -56,7 +56,7 @@ architecture BEH of TB_ACTIVATION_CONTROL is
     
     signal ACC_TO_ACT_ADDR     : ACCUMULATOR_ADDRESS_TYPE;
     signal ACTIVATION_FUNCTION : ACTIVATION_BIT_TYPE;
-    signal SIGNED_NOT_UNSIGNED : std_logic;
+    --signal SIGNED_NOT_UNSIGNED : std_logic;
     
     signal ACT_TO_BUF_ADDR : BUFFER_ADDRESS_TYPE;
     signal BUF_WRITE_EN    : std_logic;
@@ -76,7 +76,7 @@ begin
         INSTRUCTION_EN => INSTRUCTION_EN,
         ACC_TO_ACT_ADDR => ACC_TO_ACT_ADDR,
         ACTIVATION_FUNCTION => ACTIVATION_FUNCTION,
-        SIGNED_NOT_UNSIGNED => SIGNED_NOT_UNSIGNED,
+        --SIGNED_NOT_UNSIGNED => SIGNED_NOT_UNSIGNED,
         ACT_TO_BUF_ADDR => ACT_TO_BUF_ADDR,
         BUF_WRITE_EN => BUF_WRITE_EN,
         BUSY => BUSY

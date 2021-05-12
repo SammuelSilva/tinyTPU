@@ -45,7 +45,7 @@ architecture BEH of TB_WEIGHT_CONTROL is
             LOAD_WEIGHT             : out std_logic;
             WEIGHT_ADDRESS          : out BYTE_TYPE;
             
-            WEIGHT_SIGNED           : out std_logic;
+            --WEIGHT_SIGNED           : out std_logic;
                         
             BUSY                    : out std_logic
         );
@@ -83,7 +83,7 @@ begin
         WEIGHT_BUFFER_ADDRESS => WEIGHT_BUFFER_ADDRESS,
         LOAD_WEIGHT => LOAD_WEIGHT,
         WEIGHT_ADDRESS => WEIGHT_ADDRESS,
-        WEIGHT_SIGNED => WEIGHT_SIGNED,
+        --WEIGHT_SIGNED => WEIGHT_SIGNED,
         BUSY => BUSY
     );
 
@@ -103,14 +103,14 @@ begin
         -- Test
         ENABLE <= '1';
         INSTRUCTION.OP_CODE <= "00001001"; -- load weight
-        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(14, LENGTH_WIDTH));
+        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(8, LENGTH_WIDTH));
         INSTRUCTION.WEIGHT_ADDRESS <= x"0000000021";
         INSTRUCTION_EN <= '1';
         wait until '1'=CLK and CLK'event;
         INSTRUCTION_EN <= '0';
         wait until BUSY = '0';
         INSTRUCTION.OP_CODE <= "00001000"; -- load weight
-        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(3, LENGTH_WIDTH));
+        INSTRUCTION.CALC_LENGTH <= std_logic_vector(to_unsigned(4, LENGTH_WIDTH));
         INSTRUCTION.WEIGHT_ADDRESS <= x"0000000081";
         INSTRUCTION_EN <= '1';
         wait until '1'=CLK and CLK'event;

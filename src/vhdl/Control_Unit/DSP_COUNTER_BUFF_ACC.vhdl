@@ -31,7 +31,7 @@ library IEEE;
     use IEEE.std_logic_1164.all;
     use IEEE.numeric_std.all;
     
-entity DSP_COUNTER is
+entity DSP_COUNTER_BUFF_ACC is
     generic(
         COUNTER_WIDTH   : natural := 32 --!< The width of the counter.
     );
@@ -46,10 +46,10 @@ entity DSP_COUNTER is
         
         COUNT_EVENT : out std_logic --!< O evento, que sera ativado quando o valor final for atingido.
     );
-end entity DSP_COUNTER;
+end entity DSP_COUNTER_BUFF_ACC;
 
 --! @brief The architecture of the DSP counter component.
-architecture BEH of DSP_COUNTER is
+architecture BEH of DSP_COUNTER_BUFF_ACC is
     constant ADD_TWO  : unsigned(COUNTER_WIDTH-1 downto 0) := (COUNTER_WIDTH-1 downto 2 => '0')&'1'&'0';
     constant ADD_ONE  : unsigned(COUNTER_WIDTH-1 downto 0) := (COUNTER_WIDTH-1 downto 1 => '0')&'1';
 
@@ -101,7 +101,7 @@ begin
                 ODD <= '0';
             else
                 if ENABLE = '1' then
-                    COUNTER <= std_logic_vector(unsigned(COUNTER) + ADD_TWO); -- Soma de "um em um" --- SOMAR DE DOIS EM DOIS
+                    COUNTER <= std_logic_vector(unsigned(COUNTER) + ADD_ONE); -- Soma de "um em um" --- SOMAR DE DOIS EM DOIS
                     -- Pipe do sinal do Evento, maior parte do tempo é 0
                     EVENT_cs <= EVENT_ns;
                     EVENT_PIPE_cs <= EVENT_PIPE_ns;

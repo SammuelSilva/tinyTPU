@@ -30,7 +30,7 @@ library IEEE;
     use IEEE.std_logic_1164.all;
     use IEEE.numeric_std.all;
     
-entity DSP_LOAD_COUNTER is
+entity DSP_LOAD_COUNTER_BUFF_ACC is
     generic(
         COUNTER_WIDTH   : natural := 32;
         MATRIX_WIDTH    : natural := 8
@@ -44,10 +44,10 @@ entity DSP_LOAD_COUNTER is
         
         COUNT_VAL   : out std_logic_vector(COUNTER_WIDTH-1 downto 0) --!< O valor atual do contador.
     );
-end entity DSP_LOAD_COUNTER;
+end entity DSP_LOAD_COUNTER_BUFF_ACC;
 
 --! @brief The architecture of the DSP load counter component.
-architecture BEH of DSP_LOAD_COUNTER is
+architecture BEH of DSP_LOAD_COUNTER_BUFF_ACC is
     signal COUNTER_INPUT_cs : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (others => '0'); -- Sinais de passagem do Input do contador
     signal COUNTER_INPUT_ns : std_logic_vector(COUNTER_WIDTH-1 downto 0);
     
@@ -59,7 +59,8 @@ architecture BEH of DSP_LOAD_COUNTER is
     
     signal LOAD_cs : std_logic := '0';
     signal LOAD_ns : std_logic;
-    constant ADD_TWO  : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (COUNTER_WIDTH-1 downto 2 => '0')&'1'&'0';
+
+    constant ADD_ONE  : std_logic_vector(COUNTER_WIDTH-1 downto 0) := (COUNTER_WIDTH-1 downto 1 => '0')&'1';
 
     attribute use_dsp : string;
     attribute use_dsp of COUNTER_ns : signal is "yes";
@@ -69,10 +70,10 @@ begin
 
     LOAD_ns <= LOAD; 
 
-    INPUT_PIPE_ns <= START_VAL when LOAD = '1' else ADD_TWO; -- Inserção do valor inicial ou do valor 1 em binario
+    INPUT_PIPE_ns <= START_VAL when LOAD = '1' else ADD_ONE; -- Inserção do valor inicial ou do valor 1 em binario
     COUNTER_INPUT_ns <= INPUT_PIPE_cs; -- COUNTER_INPUT_ns <- INPUT_PIPE_cs <- INPUT_PIPE_ns;
     
-    COUNTER_ns <= std_logic_vector(unsigned(COUNTER_cs) + unsigned(COUNTER_INPUT_cs)); -- Contador somando de "dois em dois"
+    COUNTER_ns <= std_logic_vector(unsigned(COUNTER_cs) + unsigned(COUNTER_INPUT_cs)); -- Contador somando de "um em um"
     COUNT_VAL <= COUNTER_cs; -- Atualiza o valor do contador atual
     
     SEQ_LOG:

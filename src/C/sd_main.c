@@ -27,16 +27,16 @@
  */
 
 #include "tinyTPU_access.h"
-#include "platform.h"
-#include "xil_exception.h"
-#include "xscugic.h"
-#include "xparameters.h"
-#include "xparameters_ps.h"
+//#include "platform.h"
+//#include "xil_exception.h"
+//#include "xscugic.h"
+//#include "xparameters.h"
+//#include "xparameters_ps.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <ff.h>
+//#include <ff.h>
 
 #define WEIGHTS "weights:["
 #define INPUTS "inputs:["
@@ -354,7 +354,9 @@ int main(void) {
 						write_instruction(&instructions[x]);
 					}
 				}
+				
 				while(!synchronize_happened);
+
 				synchronize_happened = 0;
 				printf("Calculations finished.\n\r");
 				uint32_t cycles;

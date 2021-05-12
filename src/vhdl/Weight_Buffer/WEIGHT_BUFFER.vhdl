@@ -37,7 +37,7 @@ entity WEIGHT_BUFFER is
     generic(
         MATRIX_WIDTH    : natural := 8;
         -- How many tiles can be saved
-        TILE_WIDTH      : natural := 69632  --!< The depth of the buffer.
+        TILE_WIDTH      : natural := 32768  --!< The depth of the buffer.
     );
     port(
         CLK, RESET      : in  std_logic;
@@ -83,7 +83,7 @@ architecture BEH of WEIGHT_BUFFER is
    -- FIM
 
    --synthesis translate_off
-    constant TILE_WIDTH_TEST : natural := 32767;
+    constant TILE_WIDTH_TEST : natural := 15;
     constant TRASH_DATA : std_logic_vector(MATRIX_WIDTH*BYTE_WIDTH-1 downto 0) := (others => '0');
    --synthesis translate_on
 
@@ -123,9 +123,11 @@ begin
     -- Read_Port0 e Read_Port1 é recebe a saida da funcao BITS_TO_BYTE (o dado). O dado esta no formato 112 bits e é convertido para um array de bits antes de ser atribuido
     READ_PORT0_REG0_ns  <= BITS_TO_BYTE_ARRAY(READ_PORT0_BITS); 
     READ_PORT1_REG0_ns  <= BITS_TO_BYTE_ARRAY(READ_PORT1_BITS);
+
     -- Demais registros fazem o resto da FIFO para leitura da PORt0 e PORT1
     READ_PORT0_REG1_ns  <= READ_PORT0_REG0_cs;
     READ_PORT1_REG1_ns  <= READ_PORT1_REG0_cs;
+
     READ_PORT0          <= READ_PORT0_REG1_cs; -- Ultimo Registro da Port0
     READ_PORT1          <= READ_PORT1_REG1_cs; -- Ultimo Registro da Port1
 
@@ -137,14 +139,10 @@ begin
         if CLK'event and CLK = '1' then
             if EN0 = '1' then --Se estiver ativado o ENABLE da port0
                 --synthesis translate_off
-                if to_integer(unsigned(ADDRESS0)) < TILE_WIDTH then --Se o endereço for menor que o tamanho do buffer
+                if to_integer(unsigned(ADDRESS0) + 1) < TILE_WIDTH then --Se o endereço for menor que o tamanho do buffer
                 --synthesis translate_on
                     READ_PORT0_BITS <= RAM(to_integer(unsigned(ADDRESS0))); -- É Atribuido a READ_PORT0 os bits que estavam na memoria na posição ADDRESS0
-                    if to_integer(unsigned(ADDRESS0)) + 1 <= MATRIX_WIDTH-1 then
-                        READ_PORT1_BITS <= RAM(to_integer(unsigned(ADDRESS0)) + 1); -- É Atribuido a READ_PORT1 os bits que estavam na memoria na posição ADDRESS0+1
-                    else
-                        READ_PORT1_BITS <= (others => '0');
-                    end if;
+                    READ_PORT1_BITS <= RAM(to_integer(unsigned(ADDRESS0)) + 1); -- É Atribuido a READ_PORT1 os bits que estavam na memoria na posição ADDRESS0+1
                 --synthesis translate_off
                 end if;
                 --synthesis translate_on
@@ -191,7 +189,7 @@ begin
                     READ_PORT0_REG1_cs <= READ_PORT0_REG1_ns;
                      -- Dados nos registradores que serão levados para saida
                     READ_PORT1_REG0_cs <= READ_PORT1_REG0_ns;
-                    READ_PORT1_REG1_cs <= READ_PORT1_REG1_ns;
+                    --READ_PORT1_REG1_cs <= READ_PORT1_REG1_ns;
                 end if;
             end if;
         end if;
